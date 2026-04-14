@@ -41,7 +41,7 @@ export default function MemoExportBar() {
           disabled={disabled}
           onClick={onExportHtml}
         >
-          Export as HTML
+          Download HTML
         </button>
         <button
           disabled={disabled}

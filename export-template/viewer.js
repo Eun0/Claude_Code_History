@@ -563,6 +563,22 @@
     sw.appendChild(previewBtn)
     banner.appendChild(bannerLabel)
     banner.appendChild(sw)
+    if (SESSION_ID) {
+      const dl = el('a', {
+        class: 'download-icon',
+        href: '/api/sessions/' + encodeURIComponent(SESSION_ID) + '/memos/export',
+        download: '',
+        rel: 'noopener',
+        title: 'Download HTML',
+        'aria-label': 'Download HTML',
+      })
+      dl.innerHTML =
+        '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" ' +
+        'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M8 2.5v7.5"/><path d="M4.5 7 8 10.5 11.5 7"/>' +
+        '<path d="M3 12.5h10"/></svg>'
+      banner.appendChild(dl)
+    }
     app.appendChild(banner)
     paintBanner()
   }
@@ -576,6 +592,6 @@
   renderMemos()
 
   app.appendChild(
-    el('footer', null, ['Exported ' + formatDate(data.generatedAt) + ' · History Viewer for Claude Code'])
+    el('footer', null, ['Downloaded ' + formatDate(data.generatedAt) + ' · History Viewer for Claude Code'])
   )
 })()
