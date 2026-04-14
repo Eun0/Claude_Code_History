@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <g fill="#CC785C" transform="translate(128 128)">
+    <path d="M0 -116 C 22 -62, 22 62, 0 116 C -22 62, -22 -62, 0 -116 Z"/>
+    <path d="M-116 0 C -62 -22, 62 -22, 116 0 C 62 22, -62 22, -116 0 Z"/>
+    <path d="M0 -82 C 14 -44, 14 44, 0 82 C -14 44, -14 -44, 0 -82 Z" transform="rotate(45)"/>
+    <path d="M0 -82 C 14 -44, 14 44, 0 82 C -14 44, -14 -44, 0 -82 Z" transform="rotate(-45)"/>
+  </g>
+</svg>
