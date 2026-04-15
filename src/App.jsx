@@ -6,6 +6,7 @@ import MemoListPage from './pages/MemoListPage.jsx'
 import EditorPage from './pages/EditorPage.jsx'
 import SessionMemoEditPage from './pages/SessionMemoEditPage.jsx'
 import SearchBar from './components/SearchBar.jsx'
+import { clearDraft as clearEditorDraft } from './state/editorDraft.js'
 
 // Hash router. Routes:
 //  #/                                  → ProjectListPage
@@ -83,6 +84,14 @@ export default function App() {
         <a
           href="#/editor"
           className={'topnav-link' + (isEditorTab ? ' is-active' : '')}
+          onClick={(e) => {
+            // Every top-nav Editor click opens a fresh draft. Forces a
+            // unique hash so the router re-parses even when we're already
+            // on /editor (same-hash navigation is a no-op otherwise).
+            e.preventDefault()
+            clearEditorDraft()
+            window.location.hash = '/editor?_t=' + Date.now()
+          }}
         >
           Editor
         </a>
@@ -117,7 +126,11 @@ export default function App() {
       <div className="main-body">
         {route.name === 'projects' && <ProjectListPage />}
         {route.name === 'memos' && <MemoListPage />}
-        {route.name === 'editor' && <EditorPage />}
+        {route.name === 'editor' && (
+          // Key on the `_t` marker so clicking the nav link while already
+          // on /editor remounts EditorPage with a clean state.
+          <EditorPage key={route.params.get('_t') || 'default'} />
+        )}
         {route.name === 'session-edit' && (
           <SessionMemoEditPage
             projectId={route.projectId}

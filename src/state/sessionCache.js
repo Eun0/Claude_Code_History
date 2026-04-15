@@ -51,6 +51,13 @@ export function fetchSession(projectId, sessionId) {
   return cache.get(key)
 }
 
+// Drop every cached session so subsequent fetchSession() calls hit the
+// network. Used by the Editor's refresh button to pick up messages added
+// elsewhere (e.g., in the main session view) since the page opened.
+export function clearSessionCache() {
+  cache.clear()
+}
+
 // Plain-text projection of a parsed message node, used for text search. We
 // keep it dumb (text/thinking/tool-name only) — tool_use inputs and results
 // can be huge and are usually noise for "find the memo about X" queries.

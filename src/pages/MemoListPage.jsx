@@ -1,12 +1,22 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
+import { readHiddenProjects } from '../state/hiddenProjects.js'
 
 export default function MemoListPage() {
   const [memos, setMemos] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    api.listMemos().then(setMemos).catch((e) => setError(String(e)))
+    const hidden = readHiddenProjects()
+    api
+      .listMemos()
+      .then((list) => {
+        const visible = hidden.size
+          ? list.filter((m) => !m.projectId || !hidden.has(m.projectId))
+          : list
+        setMemos(visible)
+      })
+      .catch((e) => setError(String(e)))
   }, [])
 
   const body = (() => {

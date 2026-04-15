@@ -1,4 +1,6 @@
 import { marked } from 'marked'
+import { fetchSession } from '../state/sessionCache.js'
+import { renderMemoSection } from './memoMarkdown.js'
 
 function escapeHtml(s) {
   return String(s || '')
@@ -9,22 +11,54 @@ function escapeHtml(s) {
     .replace(/'/g, '&#39;')
 }
 
-export function buildMarkdown({ docTitle, intro, blocks }) {
-  const parts = []
-  const title = (docTitle || '').trim()
-  if (title) parts.push(`# ${title}`)
-  const introText = (intro || '').trim()
-  if (introText) parts.push(introText)
+// Goes through the SAME `renderMemoSection` the server uses for
+// /api/sessions/:sid/memos/markdown, so the Editor's copied output matches
+// the memo side panel's preview markdown byte-for-byte when the underlying
+// content is the same.
+export async function buildMarkdown({ docTitle, intro, blocks }) {
+  const title = (docTitle || '').trim() || 'Claude Code Memos'
+  const out = [`# ${title}`, '']
 
-  for (const b of blocks) {
-    const bTitle = (b.title || '').trim() || 'untitled'
-    parts.push(`## ${bTitle}`)
-    const note = (b.note || '').trim()
-    if (note) parts.push(note)
-    const srcBits = [b.sourceProjectId, b.sourceSessionId?.slice(0, 8)].filter(Boolean)
-    if (srcBits.length) parts.push(`_from ${srcBits.join(' · ')}_`)
+  const introText = (intro || '').trim()
+  if (introText) {
+    out.push(introText)
+    out.push('')
   }
-  return parts.join('\n\n') + '\n'
+
+  if (!blocks.length) {
+    out.push('_(No memos yet.)_')
+    return out.join('\n') + '\n'
+  }
+
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i]
+    const nodes = await fetchBlockNodes(b)
+    out.push(
+      renderMemoSection({
+        title: b.title,
+        note: b.note,
+        index: i,
+        nodes,
+      })
+    )
+    out.push('')
+  }
+  return out.join('\n').trimEnd() + '\n'
+}
+
+async function fetchBlockNodes(block) {
+  const { sourceProjectId, sourceSessionId, messageUuids } = block
+  if (!sourceProjectId || !sourceSessionId) return []
+  if (!Array.isArray(messageUuids) || messageUuids.length === 0) return []
+  let data
+  try {
+    data = await fetchSession(sourceProjectId, sourceSessionId)
+  } catch {
+    return []
+  }
+  const wanted = new Set(messageUuids)
+  // Preserve the source session's natural ordering.
+  return (data.messages || []).filter((m) => m.uuid && wanted.has(m.uuid))
 }
 
 // Self-contained HTML — visual form mirrors export-template/template.html
@@ -36,7 +70,7 @@ export function buildHtml({ docTitle, intro, blocks }) {
   const title = (docTitle || '').trim() || 'Claude Code Memos'
   const ledeText = (intro || '').trim() || 'A curated excerpt from a Claude Code session.'
   const introHtml = marked.parse(ledeText, { gfm: true, breaks: false })
-  const memosHtml = (blocks || []).map((b, i) => renderMemoSection(b, i)).join('\n')
+  const memosHtml = (blocks || []).map((b, i) => renderMemoHtml(b, i)).join('\n')
   const dateStr = escapeHtml(
     (() => {
       try {
@@ -175,7 +209,7 @@ ${memosHtml}
 `
 }
 
-function renderMemoSection(b, i) {
+function renderMemoHtml(b, i) {
   const num = String(i + 1).padStart(2, '0')
   const title = (b.title || '').trim() || 'untitled'
   const note = (b.note || '').trim()

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api.js'
 import { fetchSession, extractMessageText } from '../state/sessionCache.js'
+import { readHiddenProjects } from '../state/hiddenProjects.js'
 import ReferencedConversation from './ReferencedConversation.jsx'
 
 // 두레이 "업무 참조"-style picker. Flat list of every memo across all sessions;
@@ -66,15 +67,22 @@ export default function MemoReferencePicker({ existingSourceIds, onPick, onClose
 
   // Two-phase load: show memos immediately so the picker is usable while
   // session fetches (and text projection) happen in the background. When
-  // the index lands, conversation text becomes part of the score.
+  // the index lands, conversation text becomes part of the score. Memos
+  // belonging to projects hidden on the project list page are filtered
+  // out — hiding a project on the home grid implies "don't surface this
+  // project anywhere else either."
   useEffect(() => {
     let cancelled = false
+    const hidden = readHiddenProjects()
     api
       .listMemos()
       .then((list) => {
         if (cancelled) return
-        setMemos(list)
-        buildConversationIndex(list, cancelled, (map) => {
+        const visible = hidden.size
+          ? list.filter((m) => !m.projectId || !hidden.has(m.projectId))
+          : list
+        setMemos(visible)
+        buildConversationIndex(visible, cancelled, (map) => {
           if (!cancelled) setConvById(map)
         }, setIndexing)
       })

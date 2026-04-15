@@ -11,7 +11,9 @@ import MemoDoc from '../components/MemoDoc.jsx'
 export default function SessionMemoEditPage({ projectId, sessionId }) {
   const [board, setBoard] = useState(null) // { sessionId, projectId, title, memos }
   const [error, setError] = useState(null)
-  const [editMode, setEditMode] = useState(true)
+  // Landing here from the side panel's "Preview & Edit" button — users want
+  // to see how the doc reads first; they can toggle into Edit if needed.
+  const [editMode, setEditMode] = useState(false)
   const [metaDate, setMetaDate] = useState(() => new Date())
   const [toast, setToast] = useState(null)
   const flashToast = (msg, ms = 2000) => {

@@ -30,12 +30,22 @@ export default function EditorPage() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [toast, setToast] = useState(null)
 
-  // Backfill messageUuids for blocks created before that field existed.
+  // Strip the `_t` cache-buster the top-nav Editor link uses to force a
+  // remount. Keeping it in the URL would just pollute the bookmark/share
+  // surface — we only needed it long enough for hashchange to fire.
   useEffect(() => {
-    const stale = blocks.some(
-      (b) => b.sourceMemoId && (!b.messageUuids || b.messageUuids.length === 0)
-    )
-    if (!stale) return
+    if (/[?&]_t=/.test(window.location.hash)) {
+      window.history.replaceState(null, '', '#/editor')
+    }
+  }, [])
+
+  // On mount: pull latest messageUuids from each source memo so the doc
+  // reflects any edits made elsewhere (main app, another tab) since the
+  // user last touched this draft. Locally-edited title/note stay put —
+  // those are intentional overrides, not stale data. Same logic the
+  // Refresh button uses, just automatic on page load.
+  useEffect(() => {
+    if (blocks.length === 0) return
     let cancelled = false
     api
       .listMemos()
@@ -45,10 +55,9 @@ export default function EditorPage() {
         setBlocks((prev) =>
           prev.map((b) => {
             if (!b.sourceMemoId) return b
-            if (b.messageUuids && b.messageUuids.length > 0) return b
             const src = byId.get(b.sourceMemoId)
             if (!src) return b
-            return { ...b, messageUuids: src.messageUuids || [] }
+            return { ...b, messageUuids: src.messageUuids || b.messageUuids || [] }
           })
         )
       })
@@ -131,7 +140,7 @@ export default function EditorPage() {
   }
   const onCopyMarkdown = async () => {
     try {
-      const md = buildMarkdown({ docTitle, intro, blocks })
+      const md = await buildMarkdown({ docTitle, intro, blocks })
       await navigator.clipboard.writeText(md)
       flashToast('Copied as Markdown')
     } catch (err) {
@@ -145,6 +154,7 @@ export default function EditorPage() {
     setIntro(DEFAULT_INTRO)
     setBlocks([])
   }
+
 
   const isAtDefault =
     docTitle === DEFAULT_TITLE && intro === DEFAULT_INTRO && blocks.length === 0

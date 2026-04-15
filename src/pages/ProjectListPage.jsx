@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api.js'
+import { readHiddenProjects, writeHiddenProjects } from '../state/hiddenProjects.js'
 
 const SORT_OPTIONS = [
   { value: 'recent', label: 'Recent' },
@@ -8,34 +9,13 @@ const SORT_OPTIONS = [
 
 const PAGE_SIZE = 9
 
-// localStorage key for per-browser hidden project ids. Versioned so a future
-// schema change can migrate without breaking stored data.
-const HIDDEN_KEY = 'projectList.hidden.v1'
-
-function readHidden() {
-  try {
-    const raw = localStorage.getItem(HIDDEN_KEY)
-    if (!raw) return new Set()
-    const arr = JSON.parse(raw)
-    return new Set(Array.isArray(arr) ? arr : [])
-  } catch {
-    return new Set()
-  }
-}
-
-function writeHidden(set) {
-  try {
-    localStorage.setItem(HIDDEN_KEY, JSON.stringify([...set]))
-  } catch {}
-}
-
 export default function ProjectListPage() {
   const [projects, setProjects] = useState(null)
   const [error, setError] = useState(null)
   const [query, setQuery] = useState('')
   const [hideEmpty, setHideEmpty] = useState(true)
   const [sortBy, setSortBy] = useState('recent') // 'recent' | 'name'
-  const [hidden, setHidden] = useState(() => readHidden())
+  const [hidden, setHidden] = useState(() => readHiddenProjects())
   const [view, setView] = useState('active') // 'active' | 'hidden'
   const [page, setPage] = useState(1)
 
@@ -57,7 +37,7 @@ export default function ProjectListPage() {
       if (prev.has(id)) return prev
       const next = new Set(prev)
       next.add(id)
-      writeHidden(next)
+      writeHiddenProjects(next)
       return next
     })
   }
@@ -66,7 +46,7 @@ export default function ProjectListPage() {
       if (!prev.has(id)) return prev
       const next = new Set(prev)
       next.delete(id)
-      writeHidden(next)
+      writeHiddenProjects(next)
       return next
     })
   }
