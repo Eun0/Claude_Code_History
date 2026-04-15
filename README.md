@@ -2,6 +2,10 @@
 
 Claude Code 대화 히스토리를 웹에서 브라우징하고, 가치 있는 부분을 **발췌+메모**해서 팀원들에게 단일 HTML / Markdown으로 공유하는 로컬 툴. 여러 세션의 메모를 모아 한 문서로 묶는 cross-session **Editor**도 포함.
 
+<video src="./assets/메인기능.mp4" controls width="100%"></video>
+
+> 📺 메인 기능 시연 영상 — [`assets/메인기능.mp4`](./assets/메인기능.mp4) (2.2MB). GitHub README에서 인라인 재생되지 않으면 링크 클릭.
+
 > Anthropic과 제휴/후원 관계가 없는 **비공식 뷰어**입니다. "Claude" 및 "Claude Code"는 Anthropic, PBC의 상표입니다.
 
 ## 기능
