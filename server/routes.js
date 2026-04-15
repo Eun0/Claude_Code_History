@@ -12,7 +12,7 @@ import {
   setBoardTitle,
   reorderMemos,
 } from './memoStore.js'
-import { buildMemoExport } from './exportHtml.js'
+import { buildMemoExport, buildCrossSessionExport } from './exportHtml.js'
 import { renderMemosMarkdown } from './exportMarkdown.js'
 import { searchAll } from './search.js'
 
@@ -149,6 +149,26 @@ export async function registerRoutes(app) {
     const html = await buildMemoExport(projectId, sessionId, { title, editable: true })
     reply.header('Content-Type', 'text/html; charset=utf-8')
     return html
+  })
+
+  // /editor's Download HTML posts its current draft here — same export
+  // pipeline as /api/sessions/:sid/memos/export (shiki highlighting,
+  // formatTools, viewer.js bundle) but for blocks drawn from multiple
+  // sessions.
+  app.post('/api/editor/export', async (req, reply) => {
+    try {
+      const body = req.body || {}
+      const html = await buildCrossSessionExport({
+        docTitle: body.docTitle || '',
+        intro: body.intro || '',
+        blocks: Array.isArray(body.blocks) ? body.blocks : [],
+      })
+      reply.header('Content-Type', 'text/html; charset=utf-8')
+      return html
+    } catch (err) {
+      reply.code(500)
+      return { error: String(err.message || err) }
+    }
   })
 
   app.get('/api/sessions/:sessionId/memos/markdown', async (req, reply) => {

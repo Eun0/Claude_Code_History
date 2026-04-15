@@ -238,3 +238,78 @@ export async function buildMemoExport(projectId, sessionId, { title, editable = 
   }
   return template.replace(/__DATA__|__VIEWER__|__TITLE__/g, (m) => replacements[m])
 }
+
+// Cross-session export for /editor's Download HTML. Shares the template +
+// viewer.js + prepareNode + renderNoteMarkdown pipeline with the single-
+// session exporter so the output is byte-compatible (same shiki highlight,
+// same formatTools output, same .memo styling) — just with blocks drawn
+// from different (projectId, sessionId) pairs.
+export async function buildCrossSessionExport({ docTitle, intro, blocks }) {
+  const [template, viewer] = await Promise.all([loadTemplate(), loadViewer()])
+
+  // Dedupe session reads across blocks that reference the same session.
+  const sessionPromises = new Map()
+  function readSessionOnce(projectId, sessionId) {
+    const key = `${projectId}|${sessionId}`
+    if (!sessionPromises.has(key)) {
+      sessionPromises.set(key, readSessionParsed(projectId, sessionId))
+    }
+    return sessionPromises.get(key)
+  }
+
+  const preparedMemos = []
+  for (const b of blocks || []) {
+    if (!b.sourceProjectId || !b.sourceSessionId) continue
+    let messages = []
+    try {
+      const res = await readSessionOnce(b.sourceProjectId, b.sourceSessionId)
+      messages = res.messages || []
+    } catch {
+      // Skip this block's conversation if the session can't be read.
+    }
+    const byUuid = new Map()
+    for (const n of messages) if (n.uuid) byUuid.set(n.uuid, n)
+
+    const nodes = []
+    for (const uuid of b.messageUuids || []) {
+      const node = byUuid.get(uuid)
+      if (!node) continue
+      nodes.push(await prepareNode(node))
+    }
+    preparedMemos.push({
+      id: b.refId || b.sourceMemoId || ('ref_' + preparedMemos.length),
+      title: b.title || '',
+      note: b.note || '',
+      noteHtml: renderNoteMarkdown(b.note || ''),
+      nodes,
+    })
+  }
+
+  const headingTitle = (docTitle || '').trim() || 'Claude Code Memos'
+  const payload = {
+    sessionMeta: {
+      projectId: null,
+      sessionId: null,
+      cwd: null,
+      gitBranch: null,
+      model: null,
+      startedAt: null,
+      endedAt: null,
+      summary: headingTitle,
+      intro: (intro || '').trim(),
+    },
+    memos: preparedMemos,
+    generatedAt: new Date().toISOString(),
+    editable: false,
+  }
+
+  const dataScript = `<script>window.__MEMOS__=${JSON.stringify(payload).replace(/</g, '\\u003c')};</script>`
+  const viewerScript = `<script>${viewer}</script>`
+
+  const replacements = {
+    __DATA__: dataScript,
+    __VIEWER__: viewerScript,
+    __TITLE__: escapeHtml(headingTitle),
+  }
+  return template.replace(/__DATA__|__VIEWER__|__TITLE__/g, (m) => replacements[m])
+}

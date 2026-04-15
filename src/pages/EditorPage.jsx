@@ -5,7 +5,6 @@ import MemoDoc, { DEFAULT_TITLE, DEFAULT_INTRO } from '../components/MemoDoc.jsx
 import { readDraft, writeDraft, clearDraft } from '../state/editorDraft.js'
 import {
   buildMarkdown,
-  buildHtml,
   downloadBlob,
   suggestFilename,
 } from '../lib/editorExport.js'
@@ -134,9 +133,34 @@ export default function EditorPage() {
     setTimeout(() => setToast(null), ms)
   }
 
-  const onDownloadHtml = () => {
-    const html = buildHtml({ docTitle, intro, blocks })
-    downloadBlob(suggestFilename(docTitle, 'html'), 'text/html;charset=utf-8', html)
+  const onDownloadHtml = async () => {
+    try {
+      // Same export pipeline the memo side panel's Download uses (shiki +
+      // formatTools + viewer.js bundle), just for cross-session blocks.
+      // See server: /api/editor/export.
+      const res = await fetch('/api/editor/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          docTitle,
+          intro,
+          blocks: blocks.map((b) => ({
+            refId: b.refId,
+            sourceMemoId: b.sourceMemoId,
+            sourceProjectId: b.sourceProjectId,
+            sourceSessionId: b.sourceSessionId,
+            title: b.title,
+            note: b.note,
+            messageUuids: b.messageUuids || [],
+          })),
+        }),
+      })
+      if (!res.ok) throw new Error('HTTP ' + res.status)
+      const html = await res.text()
+      downloadBlob(suggestFilename(docTitle, 'html'), 'text/html;charset=utf-8', html)
+    } catch (err) {
+      flashToast('Download failed: ' + err.message, 3000)
+    }
   }
   const onCopyMarkdown = async () => {
     try {

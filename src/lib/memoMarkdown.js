@@ -85,7 +85,7 @@ function quote(body) {
     .join('\n')
 }
 
-function renderTurns(nodes) {
+export function renderTurns(nodes) {
   const merged = mergeAssistantTurns(nodes)
   const out = []
   for (const n of merged) {

@@ -205,11 +205,22 @@
       })
     }
     headerContainer.appendChild(h1)
-    headerContainer.appendChild(el('p', { class: 'lede' }, ['A curated excerpt from a Claude Code session.']))
+    // Cross-session exports (from /editor) provide their own intro; fall
+    // back to the single-session default otherwise.
+    const ledeWrap = el('p', { class: 'lede' })
+    if (meta.intro) {
+      ledeWrap.innerHTML = renderNoteMd(meta.intro)
+    } else {
+      ledeWrap.textContent = 'A curated excerpt from a Claude Code session.'
+    }
+    headerContainer.appendChild(ledeWrap)
 
     const dl = el('dl', { class: 'meta' })
     const items = []
-    if (meta.startedAt) items.push(['date', formatDate(meta.startedAt)])
+    // date: session's startedAt when available, else the export generation
+    // time (cross-session docs have no single startedAt).
+    const dateIso = meta.startedAt || data.generatedAt
+    if (dateIso) items.push(['date', formatDate(dateIso)])
     if (meta.gitBranch && meta.gitBranch !== 'HEAD') items.push(['branch', meta.gitBranch])
     if (meta.model) items.push(['model', meta.model])
     items.forEach(function (kv) {

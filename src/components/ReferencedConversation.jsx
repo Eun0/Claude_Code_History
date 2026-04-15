@@ -40,11 +40,15 @@ function mergeAssistantTurns(nodes) {
 // renderNode output via the existing React UserMessage/AssistantMessage/
 // ToolResultBlock components. No selection / drag / in-memo highlight —
 // this is pure presentation, like the preview HTML.
-export default function ReferencedConversation({ projectId, sessionId, messageUuids }) {
-  const [messages, setMessages] = useState(null)
+// `initialMessages` lets the caller inject already-fetched session
+// messages so the component renders synchronously on first paint — used
+// by the HTML export path (renderToStaticMarkup can't run effects).
+export default function ReferencedConversation({ projectId, sessionId, messageUuids, initialMessages }) {
+  const [messages, setMessages] = useState(initialMessages || null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    if (initialMessages) return
     let cancelled = false
     if (!projectId || !sessionId) return
     fetchSession(projectId, sessionId)
@@ -58,7 +62,7 @@ export default function ReferencedConversation({ projectId, sessionId, messageUu
     return () => {
       cancelled = true
     }
-  }, [projectId, sessionId])
+  }, [projectId, sessionId, initialMessages])
 
   const nodes = useMemo(() => {
     if (!projectId || !sessionId) return []
