@@ -1,19 +1,26 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { readHiddenProjects } from '../state/hiddenProjects.js'
+import { readHiddenSessions } from '../state/hiddenSessions.js'
 
 export default function MemoListPage() {
   const [memos, setMemos] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    const hidden = readHiddenProjects()
+    const hiddenP = readHiddenProjects()
+    const hiddenS = readHiddenSessions()
     api
       .listMemos()
       .then((list) => {
-        const visible = hidden.size
-          ? list.filter((m) => !m.projectId || !hidden.has(m.projectId))
-          : list
+        const visible =
+          hiddenP.size || hiddenS.size
+            ? list.filter(
+                (m) =>
+                  (!m.projectId || !hiddenP.has(m.projectId)) &&
+                  (!m.sessionId || !hiddenS.has(m.sessionId))
+              )
+            : list
         setMemos(visible)
       })
       .catch((e) => setError(String(e)))

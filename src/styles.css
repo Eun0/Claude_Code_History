@@ -648,6 +648,7 @@ pre code {
 }
 
 .session-row {
+  position: relative;
   display: block;
   padding: 14px 22px;
   border-bottom: 1px solid var(--border-hair);
@@ -658,6 +659,65 @@ pre code {
   background: none;
   width: 100%;
   text-align: left;
+}
+.session-row.hidden-row {
+  background: var(--bg-soft);
+  border-left-style: dashed;
+  opacity: 0.85;
+}
+.session-row-hide {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-4);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms, background-color 120ms, color 120ms;
+}
+.session-row:hover .session-row-hide,
+.session-row-hide:focus-visible,
+.session-row.hidden-row .session-row-hide {
+  opacity: 1;
+}
+.session-row-hide:hover {
+  background: var(--bg-soft);
+  color: var(--text-2);
+}
+
+.sidebar-header-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.sidebar-hidden-toggle {
+  font-size: 10.5px;
+  padding: 3px 8px;
+  color: var(--text-3);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hair);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--mono);
+  letter-spacing: 0.02em;
+  transition: color 120ms, border-color 120ms;
+}
+.sidebar-hidden-toggle:hover {
+  color: var(--text);
+  border-color: var(--text-3);
+}
+.sidebar-hidden-toggle.active {
+  color: var(--text);
+  border-color: var(--text-3);
+  background: var(--bg-soft);
 }
 .session-row:hover {
   background: var(--bg-panel);

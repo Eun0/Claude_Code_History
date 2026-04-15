@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api.js'
 import { fetchSession, extractMessageText } from '../state/sessionCache.js'
 import { readHiddenProjects } from '../state/hiddenProjects.js'
+import { readHiddenSessions } from '../state/hiddenSessions.js'
 import ReferencedConversation from './ReferencedConversation.jsx'
 
 // 두레이 "업무 참조"-style picker. Flat list of every memo across all sessions;
@@ -73,14 +74,20 @@ export default function MemoReferencePicker({ existingSourceIds, onPick, onClose
   // project anywhere else either."
   useEffect(() => {
     let cancelled = false
-    const hidden = readHiddenProjects()
+    const hiddenP = readHiddenProjects()
+    const hiddenS = readHiddenSessions()
     api
       .listMemos()
       .then((list) => {
         if (cancelled) return
-        const visible = hidden.size
-          ? list.filter((m) => !m.projectId || !hidden.has(m.projectId))
-          : list
+        const visible =
+          hiddenP.size || hiddenS.size
+            ? list.filter(
+                (m) =>
+                  (!m.projectId || !hiddenP.has(m.projectId)) &&
+                  (!m.sessionId || !hiddenS.has(m.sessionId))
+              )
+            : list
         setMemos(visible)
         buildConversationIndex(visible, cancelled, (map) => {
           if (!cancelled) setConvById(map)
