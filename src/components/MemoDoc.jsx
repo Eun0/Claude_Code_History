@@ -300,7 +300,7 @@ export default function MemoDoc({
         )}
 
         <footer>
-          {footerText ?? `Downloaded ${formatDateLong(metaDate)} · History Viewer for Claude Code`}
+          {footerText ?? `Downloaded ${formatDateLong(metaDate)}`}
         </footer>
       </div>
     </div>

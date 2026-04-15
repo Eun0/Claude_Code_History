@@ -202,7 +202,7 @@ footer {
 <div class="lede">${introHtml}</div>
 <dl class="meta"><span class="m-item"><dt>date</dt>${dateStr}</span></dl>
 ${memosHtml}
-<footer>Downloaded ${dateStr} · History Viewer for Claude Code</footer>
+<footer>Downloaded ${dateStr}</footer>
 </div>
 </body>
 </html>
