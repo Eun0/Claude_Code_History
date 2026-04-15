@@ -269,7 +269,7 @@ pre code {
   padding: 48px 56px 80px 56px;
   overflow-y: auto;
   flex: 1;
-  max-width: 860px;
+  max-width: 1080px;
   width: 100%;
   margin: 0 auto;
 }
@@ -283,8 +283,290 @@ pre code {
 .project-list-page .page-sub {
   color: var(--text-3);
   font-size: 13px;
-  margin: 0 0 32px 0;
+  margin: 0 0 20px 0;
   font-style: italic;
+}
+
+.project-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 24px 0;
+}
+.project-search {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: var(--serif);
+  color: var(--text);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hair);
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+.project-search:focus {
+  outline: none;
+  border-color: var(--text-3);
+}
+
+.project-sort {
+  flex: none;
+  position: relative;
+}
+.project-sort-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-family: var(--serif);
+  color: var(--text);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hair);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.project-sort-trigger svg {
+  color: var(--text-3);
+  transition: transform 0.15s;
+}
+.project-sort-trigger:hover {
+  border-color: var(--text-3);
+}
+.project-sort-trigger[aria-expanded='true'] {
+  border-color: var(--text-3);
+}
+.project-sort-trigger[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+.project-sort-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.project-sort-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 100%;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--border-hair);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(24, 24, 26, 0.08);
+  z-index: 50;
+}
+.project-sort-option {
+  padding: 7px 12px;
+  font-size: 13px;
+  font-family: var(--serif);
+  color: var(--text-2);
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+}
+.project-sort-option:hover {
+  background: var(--bg-soft);
+  color: var(--text);
+}
+.project-sort-option.active {
+  color: var(--text);
+  background: var(--bg-panel);
+}
+
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.project-card {
+  position: relative;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 18px 18px 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hair);
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, transform 0.15s;
+  min-height: 96px;
+}
+.project-card:hover {
+  border-color: var(--text-3);
+  transform: translateY(-1px);
+}
+
+/* Hover-only dismiss button tucked in the top-right. Stays out of the way
+ * until the card is hovered so it doesn't clutter the grid. */
+.project-card-hide {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-4);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background-color 0.12s, color 0.12s;
+}
+.project-card:hover .project-card-hide,
+.project-card-hide:focus-visible {
+  opacity: 1;
+}
+.project-card-hide:hover {
+  background: var(--bg-soft);
+  color: var(--text-2);
+}
+
+.project-card.hidden-card {
+  background: var(--bg-soft);
+  border-style: dashed;
+  color: var(--text-2);
+  cursor: default;
+}
+.project-card.hidden-card:hover {
+  transform: none;
+  border-color: var(--border);
+}
+.project-card.hidden-card .name {
+  color: var(--text-2);
+}
+/* The restore button is the only affordance on a hidden card, so it stays
+ * visible (unlike the hover-only × on active cards). */
+.project-card.hidden-card .project-card-hide {
+  opacity: 1;
+  color: var(--text-3);
+}
+.project-card.hidden-card .project-card-hide:hover {
+  color: var(--text);
+  background: var(--bg);
+}
+
+.hidden-toggle {
+  flex: none;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-family: var(--serif);
+  color: var(--text-2);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hair);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.hidden-toggle:hover {
+  border-color: var(--text-3);
+  color: var(--text);
+}
+.hidden-toggle.active {
+  color: var(--text);
+  border-color: var(--text-3);
+  background: var(--bg-soft);
+}
+.project-card .name {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.project-card .parent {
+  font-size: 12px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.project-card .meta {
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 11.5px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.project-empty-search {
+  color: var(--text-3);
+  font-style: italic;
+  padding: 32px 0;
+  text-align: center;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  margin-top: 28px;
+  font-family: var(--serif);
+  font-variant-numeric: tabular-nums;
+}
+.pagination-num,
+.pagination-step {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s;
+}
+.pagination-num:hover:not(.active),
+.pagination-step:not(:disabled):hover {
+  background: var(--bg-soft);
+  color: var(--text);
+}
+.pagination-num.active {
+  color: var(--text);
+  border-color: var(--text-3);
+  background: var(--bg-panel);
+  cursor: default;
+}
+.pagination-step:disabled {
+  color: var(--text-4);
+  cursor: default;
+}
+.pagination-ellipsis {
+  min-width: 20px;
+  text-align: center;
+  color: var(--text-4);
+  font-size: 13px;
+}
+
+.show-empty-toggle {
+  display: inline-block;
+  margin-top: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-3);
+  font-size: 12px;
+  font-family: var(--serif);
+  font-style: italic;
+  cursor: pointer;
+}
+.show-empty-toggle:hover {
+  color: var(--text-2);
 }
 
 .memo-row {
@@ -325,35 +607,6 @@ pre code {
   font-size: 11.5px;
   margin-top: 6px;
   font-family: var(--mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.project-row {
-  display: block;
-  padding: 18px 0;
-  border-bottom: 1px solid var(--border-hair);
-  cursor: pointer;
-  border-top: none;
-  border-left: none;
-  border-right: none;
-  background: none;
-}
-.project-row:first-of-type {
-  border-top: 1px solid var(--border-hair);
-}
-.project-row:hover {
-  border-bottom-color: var(--text-3);
-}
-.project-row .path {
-  font-family: var(--mono);
-  font-size: 13.5px;
-  color: var(--text);
-  letter-spacing: -0.01em;
-}
-.project-row .sub {
-  color: var(--text-3);
-  font-size: 12px;
-  margin-top: 6px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -602,6 +855,13 @@ pre code {
   padding: 20px 64px 240px 64px;
   max-width: 1080px;
   margin: 0 auto;
+}
+/* While a multi-row drag is active, suppress native text selection so the
+ * browser doesn't keep trying to extend a text range underneath. Within-row
+ * drags (the default text-copy path) never set this class. */
+.messages.row-dragging,
+.messages.row-dragging * {
+  user-select: none;
 }
 
 /* ---------- Message rows ---------- */
@@ -1316,6 +1576,42 @@ pre code {
   color: var(--error);
   border-bottom-color: var(--error);
 }
+.memo-card .memo-actions button.primary {
+  color: var(--accent-ink);
+  border-bottom-color: var(--accent);
+}
+.memo-card .memo-actions button:disabled {
+  color: var(--text-4);
+  cursor: not-allowed;
+  border-bottom-color: transparent;
+}
+.memo-card .memo-actions button:disabled:hover {
+  color: var(--text-4);
+  border-bottom-color: transparent;
+}
+
+/* The memo being edited gets a subtle accent rule on the left so it's
+ * immediately clear which card owns the current membership-edit session. */
+.memo-card.editing-messages {
+  box-shadow: inset 3px 0 0 var(--accent);
+  padding-left: 10px;
+  margin-left: -10px;
+}
+/* Other cards dim out during someone else's edit session to discourage stray
+ * clicks on Edit/Delete that are already disabled anyway. */
+.memo-card.locked {
+  opacity: 0.45;
+  cursor: default;
+}
+.memo-card.locked .handle {
+  cursor: default;
+}
+
+/* Selection bar switches colour in edit mode so the user immediately sees
+ * it's the "save the membership change" bar, not the "create a new memo" bar. */
+.selection-bar.editing {
+  background: var(--accent-ink);
+}
 
 /* ---------- Selection bar ---------- */
 .selection-bar {
@@ -1495,6 +1791,847 @@ pre code {
   font-size: 13px;
   font-family: var(--serif);
   font-style: italic;
+}
+
+/* ---------- Editor page (cross-session memo composer) ----------
+ * The visual spec here tracks export-template/template.html — the same form
+ * you see when clicking "Preview & Edit" on a session's memo panel. The goal:
+ * composing a doc in /editor looks identical to editing the downloaded HTML
+ * in its preview. Class names (.wrap, .doc-title, .lede, .memo, .memo-title-text,
+ * .note-edit, .edit-banner) intentionally mirror the template so typography
+ * tokens and edit-mode affordances stay in lockstep.
+ */
+.editor-page {
+  flex: 1;
+  overflow-y: auto;
+  width: 100%;
+  background: var(--bg);
+}
+
+/* ---- Banner — direct port of template.html .edit-banner so the Editor's
+ * top bar is visually identical to the preview page's. Placed inside .wrap
+ * with negative margins (matching template.html) so it extends past the
+ * wrap's padding to read as a full-bleed sticky top bar. */
+.editor-page .edit-banner {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  margin: -72px -36px 36px -36px;
+  padding: 10px 36px;
+  background: #fef7d9;
+  border-bottom: 1px solid #e8d97a;
+  color: #5a4a15;
+  font-size: 12.5px;
+  font-family: var(--sans);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: background-color 180ms, border-color 180ms, color 180ms;
+}
+.editor-page .edit-banner.preview {
+  background: #eef4e3;
+  border-bottom-color: #c8d8a8;
+  color: #3a4a2a;
+}
+.editor-page .edit-banner-label {
+  flex: 1;
+}
+.editor-page .edit-banner-dot {
+  color: #c27a0a;
+  margin-right: 8px;
+  font-size: 10px;
+}
+.editor-page .edit-banner-dot.preview {
+  color: #6b8a4a;
+}
+.editor-page .edit-banner strong {
+  color: #3d3208;
+  font-weight: 600;
+}
+.editor-page .edit-banner em {
+  font-style: italic;
+  color: #3d3208;
+}
+.editor-page .edit-banner.preview strong,
+.editor-page .edit-banner.preview em {
+  color: #2a3820;
+}
+
+/* Segmented Edit/Preview switch — copied from template.html .mode-switch. */
+.editor-page .mode-switch {
+  flex: none;
+  display: inline-flex;
+  background: rgba(24, 24, 26, 0.06);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.editor-page .mode-switch-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  padding: 5px 14px;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-3);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 140ms, background-color 140ms, box-shadow 140ms;
+  letter-spacing: 0.005em;
+}
+.editor-page .mode-switch-btn:hover {
+  color: var(--text);
+}
+.editor-page .mode-switch-btn.active {
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(24, 24, 26, 0.08), 0 0 0 0.5px rgba(24, 24, 26, 0.04);
+}
+.editor-page .mode-switch-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Icon buttons (Download HTML / Copy MD / Clear) — share template's
+ * .download-icon look so they visually rhyme with the preview page. */
+.editor-page .edit-banner .download-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: currentColor;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.editor-page .edit-banner .download-icon:hover {
+  color: var(--text);
+  background: rgba(24, 24, 26, 0.06);
+}
+.editor-page .edit-banner .download-icon:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.editor-page .edit-banner .editor-clear-icon:hover {
+  color: var(--error);
+  background: rgba(160, 48, 58, 0.08);
+}
+
+/* ---- Document wrap (mirrors template.html .wrap) ---- */
+.editor-page .wrap {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 72px 36px 120px 36px;
+}
+
+/* Doc title — h1 32px serif, editable dashed-underline affordance. */
+.editor-page .doc-title {
+  display: block;
+  width: 100%;
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 32px;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 2px 8px;
+  margin: 0 -8px 6px -8px;
+  border-radius: 4px;
+  border-bottom: 1px dashed rgba(47, 63, 111, 0.3);
+  transition: background-color 120ms, border-color 120ms, box-shadow 120ms;
+}
+.editor-page .doc-title:hover {
+  background: rgba(47, 63, 111, 0.05);
+  border-bottom-color: var(--accent);
+}
+.editor-page .doc-title:focus {
+  background: rgba(47, 63, 111, 0.08);
+  border-bottom-color: var(--accent);
+  box-shadow: 0 1px 0 var(--accent);
+}
+.editor-page .doc-title::placeholder {
+  color: var(--text-4);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Lede (intro) — italic serif 13px text-3, matches template .lede.  */
+.editor-page .lede {
+  display: block;
+  width: 100%;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-3);
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 2px 8px;
+  margin: 0 -8px 6px -8px;
+  border-radius: 3px;
+  resize: none;
+  overflow: hidden;
+  min-height: 0;
+}
+.editor-page .lede-editable {
+  border-bottom: 1px dashed rgba(47, 63, 111, 0.25);
+  transition: background-color 120ms, border-color 120ms;
+}
+.editor-page .lede-editable:hover {
+  background: rgba(47, 63, 111, 0.04);
+  border-bottom-color: var(--accent);
+}
+.editor-page .lede-editable:focus {
+  background: rgba(47, 63, 111, 0.07);
+  border-bottom-color: var(--accent);
+}
+.editor-page .lede::placeholder {
+  color: var(--text-4);
+  font-style: italic;
+}
+
+/* .meta dl — mirrors template.html .meta (DATE row under the lede). */
+.editor-page .meta {
+  color: var(--text-3);
+  font-size: 11px;
+  font-family: var(--mono);
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin: 18px 0 0 0;
+  padding-bottom: 36px;
+  border-bottom: 1px solid var(--border-hair);
+  font-variant-numeric: tabular-nums;
+}
+.editor-page .meta dt {
+  display: inline;
+  color: var(--text-4);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-right: 5px;
+}
+.editor-page .meta .m-item {
+  white-space: nowrap;
+}
+
+/* ---- .memo section (mirrors template.html .memo) ---- */
+.editor-page .memo {
+  position: relative;
+  padding: 44px 0 36px 0;
+  border-bottom: 1px solid var(--border-hair);
+}
+.editor-page .memo:last-of-type {
+  border-bottom: none;
+}
+.editor-page .memo.dragging {
+  opacity: 0.4;
+  background: var(--bg-soft);
+  outline: 1px dashed var(--accent);
+  outline-offset: -1px;
+}
+/* Strong drop indicator — a 3px accent bar above the target with a soft
+ * glow, plus a subtle accent tint on the whole row, so the user sees
+ * exactly where the dragged block will land. */
+.editor-page .memo.drag-over::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -8px;
+  right: -8px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  box-shadow: 0 0 0 4px rgba(47, 63, 111, 0.18);
+  z-index: 3;
+}
+.editor-page .memo.drag-over {
+  background: rgba(47, 63, 111, 0.04);
+}
+
+.editor-page .memo h2 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--text);
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.editor-page .memo h2 .index {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-4);
+  letter-spacing: 0.05em;
+  vertical-align: 0.15em;
+  font-style: normal;
+}
+.editor-page .memo-title-text {
+  flex: 1;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 1px 6px;
+  margin: -1px -6px;
+  border-radius: 3px;
+  border-bottom: 1px dashed rgba(47, 63, 111, 0.35);
+  transition: background-color 120ms, border-color 120ms, box-shadow 120ms;
+}
+.editor-page .memo-title-text:hover {
+  background: rgba(47, 63, 111, 0.06);
+  border-bottom-color: var(--accent);
+}
+.editor-page .memo-title-text:focus {
+  background: rgba(47, 63, 111, 0.1);
+  border-bottom-color: var(--accent);
+  box-shadow: 0 1px 0 var(--accent);
+}
+.editor-page .memo-title-text::placeholder {
+  color: var(--text-4);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Note block — click-to-edit pattern ported from viewer.js makeNote +
+ * template.html .note-wrap / .note.editable / .note-edit. Resting state
+ * shows rendered markdown as `.note.editable` (same serif italic accent
+ * block used in read-only preview). Clicking swaps in a `.note-edit`
+ * textarea (mono, bg-panel). Blur or Escape commits and swaps back. */
+.editor-page .note-wrap {
+  margin: 18px 0 10px 0;
+  position: relative;
+}
+.editor-page .note-wrap .note {
+  margin: 0;
+  cursor: text;
+  border-radius: 3px;
+  transition: background-color 120ms, box-shadow 120ms;
+  position: relative;
+}
+.editor-page .note-wrap .note.editable::after {
+  content: '\270E edit';
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  font-family: var(--sans);
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--text-4);
+  opacity: 0;
+  transition: opacity 120ms;
+  pointer-events: none;
+}
+.editor-page .note-wrap .note.editable:hover {
+  background: rgba(47, 63, 111, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(47, 63, 111, 0.15);
+}
+.editor-page .note-wrap .note.editable:hover::after {
+  opacity: 1;
+}
+.editor-page .note-wrap .note.is-placeholder {
+  color: var(--text-4);
+  border-left-style: dashed;
+}
+.editor-page .note-edit {
+  display: block;
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  border-radius: 2px;
+  padding: 10px 12px;
+  margin: 0;
+  resize: vertical;
+  min-height: 60px;
+  outline: none;
+  transition: box-shadow 120ms;
+}
+.editor-page .note-edit:focus {
+  box-shadow: 0 0 0 2px rgba(47, 63, 111, 0.15);
+}
+.editor-page .note-edit::placeholder {
+  color: var(--text-4);
+  font-style: italic;
+}
+
+/* Source attribution — serif italic small, echoes template .lede color. */
+.editor-page .memo-source {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--text-3);
+  margin: 6px 0 0 0;
+}
+.editor-page .memo-source a {
+  color: var(--text-3);
+  border-bottom: none;
+}
+.editor-page .memo-source a:hover {
+  color: var(--text);
+  border-bottom-color: var(--text-3);
+}
+
+/* Toolbar — always visible top-right cluster of reorder/delete buttons.
+ * Removes the old "find the tiny handle on hover" UX. */
+.editor-page .memo-toolbar {
+  position: absolute;
+  top: 32px;
+  right: -4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  background: var(--bg);
+  border: 1px solid var(--border-hair);
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(24, 24, 26, 0.04);
+  opacity: 0.5;
+  transition: opacity 120ms;
+  z-index: 2;
+}
+.editor-page .memo:hover .memo-toolbar,
+.editor-page .memo:focus-within .memo-toolbar {
+  opacity: 1;
+}
+
+.editor-page .memo-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 26px;
+  padding: 0;
+  color: var(--text-3);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: -2px;
+  user-select: none;
+  cursor: grab;
+  border-radius: 4px;
+  transition: background-color 120ms, color 120ms;
+}
+.editor-page .memo-handle:hover {
+  background: var(--bg-soft);
+  color: var(--text);
+}
+.editor-page .memo-handle:active {
+  cursor: grabbing;
+}
+
+.editor-page .memo-move,
+.editor-page .memo-toolbar .memo-remove {
+  width: 24px;
+  height: 26px;
+  padding: 0;
+  font-size: 12px;
+  color: var(--text-3);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 120ms, color 120ms;
+}
+.editor-page .memo-move:hover:not(:disabled),
+.editor-page .memo-toolbar .memo-remove:hover {
+  color: var(--text);
+  background: var(--bg-soft);
+}
+.editor-page .memo-move:disabled {
+  color: var(--text-4);
+  cursor: not-allowed;
+}
+.editor-page .memo-toolbar .memo-remove:hover {
+  color: var(--error);
+  background: rgba(160, 48, 58, 0.08);
+}
+
+/* Add button sits where the next section would begin. */
+.editor-page .editor-add-btn {
+  display: block;
+  width: 100%;
+  margin-top: 36px;
+  padding: 14px;
+  font-size: 13px;
+  font-family: var(--sans);
+  color: var(--text-3);
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 120ms, color 120ms, background-color 120ms;
+}
+.editor-page .editor-add-btn:hover {
+  color: var(--text);
+  border-color: var(--text-3);
+  background: var(--bg-panel);
+}
+
+/* Footer — mirrors template.html footer spec (mono small text at the bottom
+ * of the wrap), so the Editor's bottom also looks like a preview page. */
+.editor-page .wrap footer {
+  margin-top: 80px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-hair);
+  color: var(--text-4);
+  font-size: 11px;
+  font-family: var(--mono);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+/* ---- Preview-mode memo (read-only) ----
+ * `.memo .note` in preview mirrors template.html exactly — serif italic
+ * body with a 2px accent left border. In edit mode the same block is the
+ * mono `.note-edit` textarea; both styles live side by side so switching
+ * modes swaps widgets without moving prose around. */
+.editor-page .memo .note {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-style: italic;
+  color: var(--text-2);
+  line-height: 1.55;
+  margin: 18px 0 10px 0;
+  padding-left: 16px;
+  border-left: 2px solid var(--accent);
+}
+.editor-page .memo .note p { margin: 6px 0; }
+.editor-page .memo .note p:first-child { margin-top: 0; }
+.editor-page .memo .note p:last-child { margin-bottom: 0; }
+.editor-page .memo .note code {
+  background: var(--bg-code);
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-style: normal;
+  font-size: 13px;
+}
+.editor-page .memo .note pre {
+  background: var(--bg-code);
+  border: 1px solid var(--border-hair);
+  padding: 10px 12px;
+  border-radius: 2px;
+  overflow-x: auto;
+  font-style: normal;
+  margin: 10px 0;
+}
+.editor-page .memo .note ul,
+.editor-page .memo .note ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+.editor-page .memo .note li { margin: 3px 0; }
+.editor-page .memo .note blockquote {
+  margin: 10px 0;
+  padding: 2px 14px;
+  border-left: 2px solid var(--border);
+  color: var(--text-3);
+}
+.editor-page .memo .note a {
+  color: var(--accent);
+  border-bottom: 1px solid transparent;
+}
+.editor-page .memo .note a:hover {
+  border-bottom-color: var(--accent);
+}
+
+/* Rendered lede markdown (preview mode). */
+.editor-page .lede p { margin: 6px 0; }
+.editor-page .lede p:first-child { margin-top: 0; }
+.editor-page .lede p:last-child { margin-bottom: 0; }
+
+/* Referenced conversation inside a memo block — strips the main session
+ * view's page-level padding/scroll hooks so messages fit in the wrap. */
+.editor-page .memo-messages {
+  padding: 0;
+  margin: 18px 0 18px 0;
+  max-width: none;
+}
+.editor-page .memo-messages .message-row {
+  scroll-margin-top: 0;
+}
+.editor-page .memo-messages .message-row:hover:not(.in-memo):not(.selected) {
+  background-color: transparent;
+}
+.editor-page .memo-messages .checkbox-gutter {
+  display: none;
+}
+.editor-page .memo-messages .message-content.assistant {
+  padding-right: 0;
+}
+.editor-page .memo-messages .message-content.assistant .message-body {
+  max-width: none;
+}
+.editor-page .memo-messages .user-bubble {
+  max-width: min(640px, 92%);
+}
+.editor-page .memo-messages .message-row:first-child {
+  padding-top: 0;
+}
+.editor-page .memo-messages .message-row:first-child .message-header {
+  margin-top: 0;
+}
+.referenced-messages-error {
+  margin: 12px 0;
+  padding: 10px 14px;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--error);
+  background: rgba(160, 48, 58, 0.06);
+  border: 1px solid rgba(160, 48, 58, 0.25);
+  border-radius: 3px;
+}
+.referenced-messages-loading {
+  margin: 14px 0;
+  padding: 4px 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.loading-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  border-top-color: var(--accent);
+  animation: loading-spin 0.7s linear infinite;
+  flex: none;
+}
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Reference picker (modal) ---------- */
+.editor-picker {
+  /* Fixed width so expanding the conversation panel inside doesn't reflow
+   * the modal — picking the wider expanded width as the resting size. */
+  width: min(820px, 92vw);
+  max-width: min(820px, 92vw);
+  display: flex;
+  flex-direction: column;
+  max-height: 78vh;
+}
+.editor-picker-indexing {
+  margin: -6px 0 10px 0;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-4);
+  letter-spacing: 0.04em;
+}
+.editor-picker-search {
+  width: 100%;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  font-family: var(--serif);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hair);
+  border-radius: 6px;
+}
+.editor-picker-search:focus {
+  outline: none;
+  border-color: var(--text-3);
+}
+.editor-picker-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0 -8px;
+  padding: 0 8px;
+  min-height: 200px;
+}
+.editor-picker-item {
+  display: block;
+  width: 100%;
+  margin-bottom: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  transition: background-color 120ms, border-color 120ms;
+  overflow: hidden;
+}
+.editor-picker-item:hover,
+.editor-picker-item.is-expanded {
+  background: var(--bg-panel);
+  border-color: var(--border-hair);
+}
+.editor-picker-item.is-selected {
+  background: rgba(47, 63, 111, 0.07);
+  border-color: var(--accent);
+}
+/* Already added to the doc — locked out so the user can't pick the same
+ * memo twice in one Add round. The conversation toggle stays usable. */
+.editor-picker-item.is-added .editor-picker-pick {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.editor-picker-item.is-added .editor-picker-check {
+  background: var(--text-3);
+  border-color: var(--text-3);
+  color: #fdfcf6;
+}
+.editor-picker-item.is-added:hover {
+  background: transparent;
+  border-color: transparent;
+}
+.editor-picker-pick {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  cursor: pointer;
+  outline: none;
+}
+.editor-picker-pick:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  border-radius: 4px;
+}
+.editor-picker-check {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg);
+  font-size: 11px;
+  font-weight: 700;
+  color: transparent;
+  transition: background-color 120ms, border-color 120ms, color 120ms;
+}
+.editor-picker-item.is-selected .editor-picker-check {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fdfcf6;
+}
+.editor-picker-body {
+  flex: 1;
+  min-width: 0;
+}
+.editor-picker-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+}
+/* Inline text-link toggle — sits in the same row as the source line so it
+ * adds info (msg count) without reading as a chunky control. */
+.editor-picker-conv-toggle {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-3);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  transition: color 120ms, border-color 120ms;
+}
+.editor-picker-conv-toggle:hover {
+  color: var(--accent);
+  background: transparent;
+  border-bottom-color: var(--accent);
+}
+.editor-picker-conversation {
+  border-top: 1px solid var(--border-hair);
+  padding: 10px 14px 14px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+.editor-picker-conversation .messages {
+  padding: 0;
+  margin: 0;
+  max-width: none;
+}
+.editor-picker-conversation .message-row {
+  scroll-margin-top: 0;
+}
+.editor-picker-conversation .checkbox-gutter {
+  display: none;
+}
+.editor-picker-conversation .message-content.assistant {
+  padding-right: 0;
+}
+.editor-picker-conversation .message-content.assistant .message-body {
+  max-width: none;
+}
+.editor-picker-conversation .user-bubble {
+  max-width: min(560px, 92%);
+}
+.editor-picker-title {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 14.5px;
+  color: var(--text);
+  letter-spacing: -0.005em;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.editor-picker-badge {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--memo-rule);
+  padding: 1px 6px;
+  border: 1px solid var(--memo-rule);
+  border-radius: 3px;
+}
+.editor-picker-note {
+  font-size: 12.5px;
+  color: var(--text-2);
+  margin-top: 4px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+.editor-picker-source {
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-4);
+  letter-spacing: 0.02em;
 }
 
 /* ---------- Shiki light override (in case of dark theme) ---------- */

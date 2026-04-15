@@ -162,6 +162,10 @@ export function parseMessages(records) {
             content: tr.content,
             isError: tr.is_error,
             isSidechain: !!rec.isSidechain,
+            // Carry the raw structured payload so renderers like AskUserQuestion
+            // can read clean fields (e.g. `answers`) without re-parsing the
+            // free-form `content` string.
+            rawResult: rec.toolUseResult,
           })
         }
         continue
@@ -226,34 +230,138 @@ export function parseMessages(records) {
 // paired tool_result nodes from the flat list. This lets the UI render the
 // tool call + its result as one quiet inline block under the assistant's text,
 // rather than as a standalone row that visually competes with the message.
+//
+// Special case — AskUserQuestion: the "tool result" is really the user's
+// answer. Burying it inside the collapsed tool group hides the most important
+// part of the conversation, so we instead replace the tool_result row with a
+// synthetic user message displaying the formatted Q/A pairs.
 export function pairToolResults(nodes) {
-  const resultMap = new Map()
-  for (const n of nodes) {
+  const resultIdxByToolId = new Map()
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i]
     if (n.kind === 'tool_result' && n.toolUseId) {
-      resultMap.set(n.toolUseId, {
-        content: n.content,
-        isError: n.isError,
-        uuid: n.uuid,
-      })
+      resultIdxByToolId.set(n.toolUseId, i)
     }
   }
   const pairedIds = new Set()
+  const replacements = new Map() // index → synthetic node to substitute in
   for (const n of nodes) {
     if (n.kind === 'assistant' && Array.isArray(n.blocks)) {
-      for (const b of n.blocks) {
-        if (b.type === 'tool_use' && resultMap.has(b.id)) {
-          b.result = resultMap.get(b.id)
-          pairedIds.add(b.id)
+      for (let bi = 0; bi < n.blocks.length; bi++) {
+        const b = n.blocks[bi]
+        if (b.type !== 'tool_use') continue
+        const idx = resultIdxByToolId.get(b.id)
+        if (b.name === 'AskUserQuestion') {
+          // Replace the tool_use block with a plain text block so the
+          // questions render as visible Claude text (outside the collapsed
+          // tool group). The user's answers are surfaced separately as a
+          // synthetic user message below.
+          n.blocks[bi] = buildAskUserQuestionTextBlock(b)
+          if (idx !== undefined) {
+            replacements.set(idx, buildAskUserAnswerNode(b, nodes[idx]))
+            pairedIds.add(b.id) // signals "drop the original tool_result row"
+          }
+          continue
         }
+        if (idx === undefined) continue
+        const resultNode = nodes[idx]
+        b.result = {
+          content: resultNode.content,
+          isError: resultNode.isError,
+          uuid: resultNode.uuid,
+        }
+        pairedIds.add(b.id)
       }
     }
   }
-  return nodes.filter((n) => {
+  const out = []
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i]
     if (n.kind === 'tool_result' && n.toolUseId && pairedIds.has(n.toolUseId)) {
-      return false
+      const replacement = replacements.get(i)
+      if (replacement) out.push(replacement)
+      continue
     }
-    return true
-  })
+    out.push(n)
+  }
+  return out
+}
+
+// Convert an AskUserQuestion tool_use block into a visible text block listing
+// the questions. Mirrors the user-side answer formatting so question and
+// answer line up visually across the two bubbles.
+function buildAskUserQuestionTextBlock(toolUseBlock) {
+  const qs = Array.isArray(toolUseBlock?.input?.questions)
+    ? toolUseBlock.input.questions
+    : []
+  const body = qs.length
+    ? qs.map((q, i) => `질문 ${i + 1}: ${q?.question || ''}`).join('  \n')
+    : '_(no questions)_'
+  // Bold prefix sits on its own line above the question list, separated by a
+  // blank line so markdown treats it as its own paragraph.
+  const text = `**AskUserQuestion 도구 호출**\n\n${body}`
+  return { type: 'text', text }
+}
+
+// Render the user's AskUserQuestion answers as a regular user bubble, since
+// from the user's perspective those answers ARE their turn in the conversation.
+function buildAskUserAnswerNode(toolUseBlock, resultNode) {
+  const pairs = extractAskAnswers(toolUseBlock, resultNode)
+  // Just the numbered answers — the question text already shows on Claude's
+  // side, so repeating it here would be visual noise. Two trailing spaces
+  // force a markdown hard line break between answers.
+  const text = pairs.length
+    ? pairs
+        .map((p, i) => `답변 ${i + 1}: ${p.answer || '_(no answer)_'}`)
+        .join('  \n')
+    : '_(no answer recorded)_'
+  return {
+    kind: 'user',
+    uuid: resultNode.uuid,
+    timestamp: resultNode.timestamp,
+    blocks: [{ type: 'text', text }],
+    isSidechain: !!resultNode.isSidechain,
+    slashCommand: null,
+    askUserAnswer: true,
+  }
+}
+
+function extractAskAnswers(toolUseBlock, resultNode) {
+  // 1) Best source: the structured `answers` object that Claude Code writes
+  //    to toolUseResult — preserves Q→A mapping cleanly even when the answer
+  //    text contains commas, quotes, or newlines.
+  const answers = resultNode?.rawResult?.answers
+  if (answers && typeof answers === 'object' && !Array.isArray(answers)) {
+    return Object.entries(answers).map(([q, a]) => ({
+      question: q,
+      answer: typeof a === 'string' ? a : JSON.stringify(a),
+    }))
+  }
+  // 2) Fallback: parse the tool_result content string of shape
+  //    `User has answered your questions: "Q1"="A1", "Q2"="A2". You can ...`
+  //    Match `"..."=` then a balanced quoted answer that may contain escapes.
+  const content = typeof resultNode?.content === 'string' ? resultNode.content : ''
+  const out = []
+  const re = /"((?:[^"\\]|\\.)*)"=\s*"((?:[^"\\]|\\.)*)"/g
+  let m
+  while ((m = re.exec(content)) !== null) {
+    out.push({ question: unescapeJsonish(m[1]), answer: unescapeJsonish(m[2]) })
+  }
+  if (out.length > 0) return out
+  // 3) Last resort: list the questions from the tool_use input with empty
+  //    answers, so the user can at least see what was asked.
+  const qs = Array.isArray(toolUseBlock?.input?.questions)
+    ? toolUseBlock.input.questions
+    : []
+  return qs.map((q) => ({ question: q?.question || '', answer: '' }))
+}
+
+function unescapeJsonish(s) {
+  return s
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '\t')
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, '\\')
 }
 
 // Mark consecutive same-speaker nodes so the UI can merge them.

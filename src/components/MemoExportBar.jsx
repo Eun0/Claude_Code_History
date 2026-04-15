@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { api } from '../api.js'
 import { useMemos } from '../state/memoStore.js'
 
-export default function MemoExportBar() {
+export default function MemoExportBar({ projectId, sessionId }) {
   const { state } = useMemos()
   const [toast, setToast] = useState(null)
   const disabled = !state.sessionId || state.memos.length === 0
+  const previewDisabled = !sessionId || !projectId
 
   const onExportHtml = () => {
     if (disabled) return
@@ -44,8 +45,16 @@ export default function MemoExportBar() {
           Download HTML
         </button>
         <button
-          disabled={disabled}
-          onClick={() => window.open(api.memosPreviewUrl(state.sessionId), '_blank')}
+          disabled={previewDisabled}
+          onClick={() => {
+            // Open the in-app session memo editor in a new tab. Same window
+            // origin so localStorage / state stays separate but the tab feels
+            // like a "side" workspace for editing this session's memos.
+            const url = `${window.location.origin}${window.location.pathname}#/sessions/${encodeURIComponent(
+              projectId
+            )}/${encodeURIComponent(sessionId)}/edit`
+            window.open(url, '_blank', 'noopener')
+          }}
         >
           Preview & Edit
         </button>

@@ -10,6 +10,7 @@ import {
   deleteMemo,
   listAllMemos,
   setBoardTitle,
+  reorderMemos,
 } from './memoStore.js'
 import { buildMemoExport } from './exportHtml.js'
 import { renderMemosMarkdown } from './exportMarkdown.js'
@@ -163,6 +164,18 @@ export async function registerRoutes(app) {
   })
 
   // ---- Memo CRUD by id (parameterised — registered last) ----
+
+  // Atomic reorder — single read+write so concurrent per-memo PATCHes
+  // can't race. Body: { orderedIds: ['memo_a', 'memo_b', ...] }.
+  app.patch('/api/sessions/:sessionId/memos/order', async (req, reply) => {
+    try {
+      const ids = (req.body && req.body.orderedIds) || []
+      return await reorderMemos(req.params.sessionId, ids)
+    } catch (err) {
+      reply.code(400)
+      return { error: String(err.message || err) }
+    }
+  })
 
   app.patch('/api/sessions/:sessionId/memos/:memoId', async (req, reply) => {
     try {

@@ -99,6 +99,36 @@ export async function updateMemo(sessionId, memoId, patch) {
   return updated
 }
 
+// Apply a complete reordering atomically. `orderedIds` is the desired
+// memoId sequence; their `order` fields get rewritten to match. Any memo
+// not present in the list keeps its original position appended after.
+// One read + one write avoids the lost-update race that hit N concurrent
+// per-memo PATCHes.
+export async function reorderMemos(sessionId, orderedIds) {
+  if (!Array.isArray(orderedIds)) {
+    throw new Error('orderedIds must be an array')
+  }
+  const board = await readMemos(sessionId)
+  const byId = new Map(board.memos.map((m) => [m.id, m]))
+  const seen = new Set()
+  const next = []
+  for (const id of orderedIds) {
+    if (seen.has(id)) continue
+    const m = byId.get(id)
+    if (!m) continue
+    seen.add(id)
+    next.push({ ...m, order: next.length })
+  }
+  // Anything missing from the request keeps relative order, appended.
+  for (const m of board.memos) {
+    if (seen.has(m.id)) continue
+    next.push({ ...m, order: next.length })
+  }
+  board.memos = next
+  await writeMemos(board)
+  return board
+}
+
 export async function deleteMemo(sessionId, memoId) {
   const board = await readMemos(sessionId)
   const before = board.memos.length

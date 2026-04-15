@@ -17,6 +17,20 @@ let state = {
   orderedUuids: [],          // ordered list of rendered message uuids, used for range selection
   loading: false,
   drag: null,                // { anchorUuids, mode: 'add'|'remove', initialSelection: Set } while mouse-drag selecting
+  editingMemoId: null,       // id of the memo whose messageUuids are being edited ("Edit Message" mode)
+}
+
+// Non-reactive ref shared between MessageRow (mousedown arms it) and the
+// MessageList global mouseup handler. Kept outside React state because flipping
+// it shouldn't trigger renders — it's only promoted to state.drag once the
+// cursor actually crosses to another row, so within-row mouse drags fall
+// through to native text selection.
+let pendingAnchor = null
+
+export const pendingDrag = {
+  arm(uuids) { pendingAnchor = uuids && uuids.length ? uuids.slice() : null },
+  clear() { pendingAnchor = null },
+  get() { return pendingAnchor },
 }
 
 const listeners = new Set()
@@ -56,6 +70,7 @@ export const actions = {
       lastSelectedUuid: null,
       orderedUuids,
       loading: false,
+      editingMemoId: null,
     }
     emit()
   },
@@ -255,6 +270,61 @@ export const actions = {
     } catch (err) {
       console.error('reorder failed', err)
     }
+  },
+
+  // --- Edit Message mode: re-sculpt an existing memo's messageUuids ---
+  //
+  // Enters by seeding `selectedUuids` with the memo's current messages, then
+  // letting the existing row-click / drag-select machinery edit the selection
+  // set. `memosByMessage` is built with this memo excluded so its yellow
+  // .in-memo background is replaced by the blue .selected highlight — the user
+  // sees the future membership state directly.
+  beginEditMessages(memoId) {
+    const memo = state.memos.find((m) => m.id === memoId)
+    if (!memo) return
+    state = {
+      ...state,
+      editingMemoId: memoId,
+      selectedUuids: new Set(memo.messageUuids || []),
+      selectMode: true,
+      lastSelectedUuid: null,
+      drag: null,
+    }
+    emit()
+  },
+
+  cancelEditMessages() {
+    if (!state.editingMemoId) return
+    state = {
+      ...state,
+      editingMemoId: null,
+      selectedUuids: new Set(),
+      selectMode: false,
+      lastSelectedUuid: null,
+      drag: null,
+    }
+    emit()
+  },
+
+  async saveEditMessages() {
+    if (!state.sessionId || !state.editingMemoId) return
+    const memoId = state.editingMemoId
+    const order = state.orderedUuids
+    const pos = new Map(order.map((u, i) => [u, i]))
+    const messageUuids = [...state.selectedUuids].sort(
+      (a, b) => (pos.get(a) ?? 0) - (pos.get(b) ?? 0)
+    )
+    const updated = await api.updateMemo(state.sessionId, memoId, { messageUuids })
+    state = {
+      ...state,
+      memos: sortMemos(state.memos.map((m) => (m.id === memoId ? updated : m))),
+      editingMemoId: null,
+      selectedUuids: new Set(),
+      selectMode: false,
+      lastSelectedUuid: null,
+      drag: null,
+    }
+    emit()
   },
 
   async deleteMemo(memoId) {

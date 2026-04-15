@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import MessageRow from './MessageRow.jsx'
 import SidechainGroup from './SidechainGroup.jsx'
 import { groupSidechains } from '../lib/groupSidechains.js'
-import { useMemos, actions as memoActions } from '../state/memoStore.js'
+import { useMemos, actions as memoActions, pendingDrag } from '../state/memoStore.js'
 import { buildMemosByMessage } from '../lib/memosByMessage.js'
 
 // Merge consecutive continuation assistant nodes into one visual "turn".
@@ -64,14 +64,39 @@ export default function MessageList({ messages, highlightedUuid }) {
   // merging; then wrap sidechain nodes.
   const merged = useMemo(() => mergeAssistantTurns(messages), [messages])
   const grouped = useMemo(() => groupSidechains(merged), [merged])
-  const memosByMessage = useMemo(() => buildMemosByMessage(state.memos), [state.memos])
+  const memosByMessage = useMemo(
+    () => buildMemosByMessage(state.memos, state.editingMemoId),
+    [state.memos, state.editingMemoId]
+  )
 
   // End a drag whenever the mouse is released anywhere in the document.
+  // Three cases on mouseup:
+  //  1) row-drag was active → just end it (existing behaviour).
+  //  2) only an "armed" pending anchor exists, and the user drag-selected
+  //     text within a single row → leave the text selection alone, just clear
+  //     the pending anchor so a later click elsewhere starts fresh.
+  //  3) only an armed anchor exists with no text selected → treat it as a
+  //     plain click and toggle the row.
   useEffect(() => {
-    const onUp = () => memoActions.endDrag()
+    const onUp = () => {
+      const anchor = pendingDrag.get()
+      pendingDrag.clear()
+      if (state.drag) {
+        memoActions.endDrag()
+        return
+      }
+      if (!anchor) return
+      const sel = window.getSelection && window.getSelection()
+      const hasText = sel && !sel.isCollapsed && sel.toString().length > 0
+      if (hasText) return
+      // Mimic a click-toggle on the anchor row by reusing beginDrag's toggle
+      // logic and immediately ending the drag.
+      memoActions.beginDrag(anchor)
+      memoActions.endDrag()
+    }
     document.addEventListener('mouseup', onUp)
     return () => document.removeEventListener('mouseup', onUp)
-  }, [])
+  }, [state.drag])
 
   // Apply content filters
   const filtered = useMemo(() => {
@@ -82,7 +107,13 @@ export default function MessageList({ messages, highlightedUuid }) {
   }, [grouped, state.showSystem])
 
   return (
-    <div className={'messages' + (state.selectMode ? ' select-mode' : '')}>
+    <div
+      className={
+        'messages' +
+        (state.selectMode ? ' select-mode' : '') +
+        (state.drag ? ' row-dragging' : '')
+      }
+    >
       {filtered.map((node, i) => {
         if (node.kind === 'sidechain_group') {
           return (

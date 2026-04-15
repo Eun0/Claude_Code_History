@@ -3,14 +3,18 @@ import ProjectListPage from './pages/ProjectListPage.jsx'
 import ProjectViewPage from './pages/ProjectViewPage.jsx'
 import SearchPage from './pages/SearchPage.jsx'
 import MemoListPage from './pages/MemoListPage.jsx'
+import EditorPage from './pages/EditorPage.jsx'
+import SessionMemoEditPage from './pages/SessionMemoEditPage.jsx'
 import SearchBar from './components/SearchBar.jsx'
 
 // Hash router. Routes:
-//  #/                        → ProjectListPage
-//  #/memos                   → MemoListPage
-//  #/p/:projectId            → ProjectViewPage (sidebar + empty main)
-//  #/p/:projectId/s/:sid     → ProjectViewPage (sidebar + session view)
-//  #/search?q=...            → SearchPage
+//  #/                                  → ProjectListPage
+//  #/memos                             → MemoListPage
+//  #/editor                            → EditorPage (cross-session composer)
+//  #/sessions/:projectId/:sid/edit     → SessionMemoEditPage (in-app preview & edit)
+//  #/p/:projectId                      → ProjectViewPage (sidebar + empty main)
+//  #/p/:projectId/s/:sid               → ProjectViewPage (sidebar + session view)
+//  #/search?q=...                      → SearchPage
 function parseHash() {
   const raw = window.location.hash.slice(1) || '/'
   const [pathPart, queryPart] = raw.split('?')
@@ -19,7 +23,20 @@ function parseHash() {
 
   if (segs.length === 0) return { name: 'projects', params }
   if (segs[0] === 'memos') return { name: 'memos', params }
+  if (segs[0] === 'editor') return { name: 'editor', params }
   if (segs[0] === 'search') return { name: 'search', params }
+  if (
+    segs[0] === 'sessions' &&
+    segs.length >= 4 &&
+    segs[3] === 'edit'
+  ) {
+    return {
+      name: 'session-edit',
+      projectId: segs[1],
+      sessionId: segs[2],
+      params,
+    }
+  }
   if (segs[0] === 'p' && segs.length >= 2) {
     const sessionId =
       segs.length === 4 && segs[2] === 's' ? segs[3] : null
@@ -47,6 +64,7 @@ export default function App() {
 
   const isProjectsTab = route.name === 'projects' || route.name === 'project'
   const isMemosTab = route.name === 'memos'
+  const isEditorTab = route.name === 'editor'
   const crumbs = (
     <div className="breadcrumbs">
       <nav className="topnav">
@@ -61,6 +79,12 @@ export default function App() {
           className={'topnav-link' + (isMemosTab ? ' is-active' : '')}
         >
           Memos
+        </a>
+        <a
+          href="#/editor"
+          className={'topnav-link' + (isEditorTab ? ' is-active' : '')}
+        >
+          Editor
         </a>
       </nav>
       {route.projectId && (
@@ -93,6 +117,13 @@ export default function App() {
       <div className="main-body">
         {route.name === 'projects' && <ProjectListPage />}
         {route.name === 'memos' && <MemoListPage />}
+        {route.name === 'editor' && <EditorPage />}
+        {route.name === 'session-edit' && (
+          <SessionMemoEditPage
+            projectId={route.projectId}
+            sessionId={route.sessionId}
+          />
+        )}
         {route.name === 'project' && (
           <ProjectViewPage
             projectId={route.projectId}

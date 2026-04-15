@@ -1,9 +1,14 @@
 // Thin fetch wrapper.
 async function request(url, options = {}) {
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    ...options,
-  })
+  // Only advertise application/json when we actually have a body. Sending the
+  // header on bodyless requests (DELETE, GET) trips Fastify's
+  // FST_ERR_CTP_EMPTY_JSON_BODY guard with a 400.
+  const hasBody = options.body != null
+  const headers = {
+    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+    ...(options.headers || {}),
+  }
+  const res = await fetch(url, { ...options, headers })
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     throw new Error(`${res.status} ${res.statusText}: ${text}`)

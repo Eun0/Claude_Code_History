@@ -199,7 +199,7 @@ export default function SessionViewPage({ projectId, sessionId, messageUuid }) {
         <SessionHeader meta={data.meta} liveStatus={liveStatus} />
         <MessageList messages={data.messages} highlightedUuid={messageUuid} />
       </div>
-      <MemoPanel sessionMeta={data.meta} />
+      <MemoPanel sessionMeta={data.meta} projectId={projectId} sessionId={sessionId} />
       <MemoSelectionBar />
     </>
   )

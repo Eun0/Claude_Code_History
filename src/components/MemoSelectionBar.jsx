@@ -6,6 +6,28 @@ export default function MemoSelectionBar() {
   const { state, actions } = useMemos()
   const [showModal, setShowModal] = useState(false)
 
+  // Edit Message mode: the selection bar becomes the Save/Cancel control for
+  // the memo being re-sculpted. Shown even when the selection is empty so the
+  // user can still cancel out or save a memo down to zero messages.
+  if (state.editingMemoId) {
+    const n = state.selectedUuids.size
+    const editingMemo = state.memos.find((m) => m.id === state.editingMemoId)
+    const label = editingMemo?.title
+      ? `Editing "${editingMemo.title}"`
+      : 'Editing memo'
+    return (
+      <div className="selection-bar editing">
+        <span className="count">
+          {label} · {n} message{n !== 1 ? 's' : ''}
+        </span>
+        <button className="primary" onClick={() => actions.saveEditMessages()}>
+          Save
+        </button>
+        <button onClick={() => actions.cancelEditMessages()}>Cancel</button>
+      </div>
+    )
+  }
+
   if (!state.selectMode || state.selectedUuids.size === 0) return null
   const n = state.selectedUuids.size
 

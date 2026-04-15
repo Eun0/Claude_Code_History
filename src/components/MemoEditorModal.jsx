@@ -18,6 +18,33 @@ export default function MemoEditorModal({ initial = {}, mode = 'create', onClose
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const submit = async () => {
+    if (saving) return
+    setSaving(true)
+    try {
+      await onSubmit({ title: title.trim(), note: note.trim() })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Enter saves; Shift+Enter (and the textarea's plain Enter) keeps the
+  // newline so multi-line notes still work.
+  const onTitleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+      e.preventDefault()
+      submit()
+    }
+  }
+  const onNoteKeyDown = (e) => {
+    // In the textarea we only treat Cmd/Ctrl+Enter as submit so plain Enter
+    // can still insert newlines for multi-line memos.
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.isComposing) {
+      e.preventDefault()
+      submit()
+    }
+  }
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -30,6 +57,7 @@ export default function MemoEditorModal({ initial = {}, mode = 'create', onClose
             placeholder="e.g. Vite 설정 자동 생성"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={onTitleKeyDown}
           />
         </div>
         <div className="field">
@@ -39,22 +67,12 @@ export default function MemoEditorModal({ initial = {}, mode = 'create', onClose
             placeholder="Why is this memo worth sharing?"
             value={note}
             onChange={(e) => setNote(e.target.value)}
+            onKeyDown={onNoteKeyDown}
           />
         </div>
         <div className="actions">
           <button onClick={onClose}>Cancel</button>
-          <button
-            className="primary"
-            disabled={saving}
-            onClick={async () => {
-              setSaving(true)
-              try {
-                await onSubmit({ title: title.trim(), note: note.trim() })
-              } finally {
-                setSaving(false)
-              }
-            }}
-          >
+          <button className="primary" disabled={saving} onClick={submit}>
             {saving ? 'Saving…' : 'Save'}
           </button>
         </div>

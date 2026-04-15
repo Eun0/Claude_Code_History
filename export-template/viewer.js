@@ -84,6 +84,60 @@
     })
   }
 
+  function deleteMemoCall(memoId) {
+    if (!SESSION_ID || !memoId) return Promise.resolve()
+    return fetch('/api/sessions/' + encodeURIComponent(SESSION_ID) + '/memos/' + encodeURIComponent(memoId), {
+      method: 'DELETE',
+    }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status)
+      showToast('Removed')
+      notifyUpdate()
+    }).catch(function (err) {
+      showToast('Remove failed: ' + err.message, true)
+    })
+  }
+
+  // Persist new ordering with one atomic PATCH. Per-memo PATCHes raced
+  // each other (concurrent read-modify-write) and dropped 404s on the
+  // losing requests; the bulk endpoint serializes the write server-side.
+  function persistOrder() {
+    if (!SESSION_ID || !data.memos) return
+    data.memos.forEach(function (m, i) { m.order = i })
+    const orderedIds = data.memos.map(function (m) { return m.id })
+    fetch('/api/sessions/' + encodeURIComponent(SESSION_ID) + '/memos/order', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderedIds: orderedIds }),
+    }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status)
+      showToast('Reordered')
+      notifyUpdate()
+    }).catch(function (err) {
+      showToast('Reorder failed: ' + err.message, true)
+    })
+  }
+
+  function moveMemoTo(fromIdx, toIdx) {
+    if (fromIdx === toIdx) return
+    const arr = data.memos.slice()
+    const moved = arr.splice(fromIdx, 1)[0]
+    arr.splice(toIdx, 0, moved)
+    data.memos = arr
+    persistOrder()
+    renderMemos()
+  }
+
+  function moveMemoBy(memoId, delta) {
+    const i = data.memos.findIndex(function (m) { return m.id === memoId })
+    if (i < 0) return
+    const j = i + delta
+    if (j < 0 || j >= data.memos.length) return
+    moveMemoTo(i, j)
+  }
+
+  // Drag state lives outside renderMemo so handlers across siblings share it.
+  let draggingMemoId = null
+
   function esc(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;')
@@ -492,6 +546,34 @@
   function renderMemo(memo, i) {
     const root = el('div', { class: 'memo' })
     const num = String(i + 1).padStart(2, '0')
+
+    if (editMode) {
+      root.appendChild(buildMemoToolbar(memo, i))
+      // Whole-card drop target so users don't have to aim at the small handle.
+      root.addEventListener('dragover', function (e) {
+        if (!draggingMemoId || draggingMemoId === memo.id) return
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+        root.classList.add('drag-over')
+      })
+      root.addEventListener('dragleave', function (e) {
+        // Only clear when the cursor truly leaves the card (not on transit
+        // between child elements).
+        if (e.currentTarget.contains(e.relatedTarget)) return
+        root.classList.remove('drag-over')
+      })
+      root.addEventListener('drop', function (e) {
+        e.preventDefault()
+        root.classList.remove('drag-over')
+        const draggedId = draggingMemoId
+        draggingMemoId = null
+        if (!draggedId || draggedId === memo.id) return
+        const fromIdx = data.memos.findIndex(function (m) { return m.id === draggedId })
+        const toIdx = data.memos.findIndex(function (m) { return m.id === memo.id })
+        if (fromIdx >= 0 && toIdx >= 0) moveMemoTo(fromIdx, toIdx)
+      })
+    }
+
     root.appendChild(makeEditableTitle(memo, num))
     const note = makeNote(memo)
     if (note) root.appendChild(note)
@@ -502,6 +584,70 @@
       if (r) root.appendChild(r)
     })
     return root
+  }
+
+  // Always-visible reorder/delete cluster — same UX as the in-app /editor
+  // page so the two surfaces feel identical.
+  function buildMemoToolbar(memo, i) {
+    const total = data.memos.length
+    const toolbar = el('div', { class: 'memo-toolbar' })
+
+    const handle = el('span', {
+      class: 'memo-handle',
+      draggable: 'true',
+      'aria-label': 'Drag to reorder',
+      title: '\ub04c\uc5b4\uc11c \uc21c\uc11c \uc774\ub3d9',
+    }, ['\u22ee\u22ee'])
+    handle.addEventListener('dragstart', function (e) {
+      draggingMemoId = memo.id
+      e.dataTransfer.effectAllowed = 'move'
+      // Some browsers refuse to start a drag without setData.
+      try { e.dataTransfer.setData('text/plain', memo.id) } catch (_) {}
+    })
+    handle.addEventListener('dragend', function () {
+      draggingMemoId = null
+      const stale = document.querySelectorAll('.memo.drag-over')
+      Array.prototype.forEach.call(stale, function (n) { n.classList.remove('drag-over') })
+    })
+
+    const moveUp = el('button', {
+      type: 'button',
+      class: 'memo-move',
+      'aria-label': 'Move up',
+      title: '\uc704\ub85c \uc774\ub3d9',
+    }, ['\u2191'])
+    if (i === 0) moveUp.disabled = true
+    moveUp.addEventListener('click', function () { moveMemoBy(memo.id, -1) })
+
+    const moveDown = el('button', {
+      type: 'button',
+      class: 'memo-move',
+      'aria-label': 'Move down',
+      title: '\uc544\ub798\ub85c \uc774\ub3d9',
+    }, ['\u2193'])
+    if (i === total - 1) moveDown.disabled = true
+    moveDown.addEventListener('click', function () { moveMemoBy(memo.id, +1) })
+
+    const removeBtn = el('button', {
+      type: 'button',
+      class: 'memo-remove',
+      'aria-label': 'Remove',
+      title: '\uc81c\uac70',
+    }, ['\u2715'])
+    removeBtn.addEventListener('click', function () {
+      if (!confirm('\uc774 \uba54\ubaa8\ub97c \uc0ad\uc81c\ud558\uc2dc\uaca0\uc2b5\ub2c8\uae4c?')) return
+      const idx = data.memos.findIndex(function (m) { return m.id === memo.id })
+      if (idx < 0) return
+      data.memos.splice(idx, 1)
+      deleteMemoCall(memo.id)
+      renderMemos()
+    })
+
+    toolbar.appendChild(handle)
+    toolbar.appendChild(moveUp)
+    toolbar.appendChild(moveDown)
+    toolbar.appendChild(removeBtn)
+    return toolbar
   }
 
   let banner = null

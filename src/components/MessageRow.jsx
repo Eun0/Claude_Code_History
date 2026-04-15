@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import UserMessage from './UserMessage.jsx'
 import AssistantMessage from './AssistantMessage.jsx'
 import ToolResultBlock from './ToolResultBlock.jsx'
-import { useMemos } from '../state/memoStore.js'
+import { useMemos, pendingDrag } from '../state/memoStore.js'
 
 // Elements within a row that should NOT trigger row selection when clicked.
 // Everything else (plain text, user bubble background, margins, etc.) is a
@@ -40,28 +40,46 @@ export default function MessageRow({ node, memosByMessage, highlightedUuid }) {
     .filter(Boolean)
     .join(' ')
 
-  // Mouse-driven selection on the whole row.
-  // - mousedown anywhere on the row (except interactive/code elements) starts
-  //   a drag that toggles this row and establishes an anchor.
-  // - mouseenter on another row while a drag is active extends the range.
-  // - shift+mousedown extends range from the previous anchor.
+  // Mouse-driven selection on the whole row, designed to coexist with native
+  // text drag-selection so users can highlight + copy message text.
+  //
+  // - shift+mousedown: extend row-range from the previous anchor (preventDefault
+  //   so the browser doesn't shift-extend a text selection at the same time).
+  // - plain mousedown: only "arm" a pending anchor — do NOT preventDefault and
+  //   do NOT toggle yet. Native text selection starts normally.
+  // - mouseenter on a *different* row while pending: promote to a real row-drag
+  //   (clearing any text selection that started inside the anchor row).
+  // - mouseup (handled in MessageList): if the user actually drag-selected text
+  //   we leave selection alone; if it was just a click, toggle the anchor row.
   // Links, buttons, <summary>, <pre>, <code>, and [data-no-select] children
-  // pass through to their native behaviour so the row selection never
-  // hijacks a meaningful interaction or blocks copy-pasting code text.
+  // pass through to their native behaviour.
   const onRowMouseDown = (e) => {
     if (uuids.length === 0) return
     if (e.button !== 0) return
     if (e.target.closest && e.target.closest(NON_SELECT_SELECTOR)) return
-    e.preventDefault()
     if (e.shiftKey && state.lastSelectedUuid) {
+      e.preventDefault()
       actions.selectRange(state.lastSelectedUuid, uuids[uuids.length - 1])
       return
     }
-    actions.beginDrag(uuids)
+    pendingDrag.arm(uuids)
   }
 
   const onRowMouseEnter = () => {
-    if (!state.drag || uuids.length === 0) return
+    if (uuids.length === 0) return
+    if (state.drag) {
+      actions.dragExtend(uuids)
+      return
+    }
+    const anchor = pendingDrag.get()
+    if (!anchor) return
+    // Cursor crossed to another row while mousedown is still held — the user
+    // intends a multi-row selection, not a text selection. Drop any text
+    // selection the browser started and switch to row-drag mode.
+    if (anchor.some((u) => uuids.includes(u))) return
+    const sel = window.getSelection && window.getSelection()
+    if (sel && sel.removeAllRanges) sel.removeAllRanges()
+    actions.beginDrag(anchor)
     actions.dragExtend(uuids)
   }
 
