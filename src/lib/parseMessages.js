@@ -18,11 +18,33 @@
 //   { type: 'image', media_type, data }
 
 const COMMAND_NAME_RE = /<command-name>([\s\S]*?)<\/command-name>/
+const TASK_NOTIF_RE = /<task-notification>([\s\S]*?)<\/task-notification>/g
 
 function extractSlashCommand(content) {
   const text = typeof content === 'string' ? content : ''
   const m = text.match(COMMAND_NAME_RE)
   return m ? m[1].trim() : null
+}
+
+// Extract all <task-notification> blocks from a user record's text content.
+// Returns an array of { taskId, status, summary } or null if none found.
+function extractTaskNotifications(content) {
+  const text = typeof content === 'string'
+    ? content
+    : Array.isArray(content)
+      ? content.filter((b) => b.type === 'text').map((b) => b.text || '').join('')
+      : ''
+  const notifs = []
+  let m
+  TASK_NOTIF_RE.lastIndex = 0
+  while ((m = TASK_NOTIF_RE.exec(text)) !== null) {
+    const body = m[1]
+    const status = (body.match(/<status>([\s\S]*?)<\/status>/) || [])[1] || ''
+    const summary = (body.match(/<summary>([\s\S]*?)<\/summary>/) || [])[1] || ''
+    const taskId = (body.match(/<task-id>([\s\S]*?)<\/task-id>/) || [])[1] || ''
+    notifs.push({ taskId: taskId.trim(), status: status.trim(), summary: summary.trim() })
+  }
+  return notifs.length ? notifs : null
 }
 
 function normalizeUserContent(content) {
@@ -147,6 +169,53 @@ export function parseMessages(records) {
     }
 
     if (rec.type === 'user') {
+      // Task notifications (subagent/background command completion) are
+      // injected as `type: 'user'` by the CLI but should render as a
+      // collapsible Claude block, not a user bubble.
+      const taskNotifs = extractTaskNotifications(rec.message?.content)
+      if (taskNotifs) {
+        // Emit as assistant continuation with a synthetic thinking-like
+        // block so it merges into the preceding Claude message's tool
+        // group as a collapsible item.
+        const thinkingBlocks = taskNotifs.map((n) => ({
+          type: 'thinking',
+          thinking: `[Task ${n.status}] ${n.summary || n.taskId}`,
+        }))
+        nodes.push({
+          kind: 'assistant',
+          uuid: rec.uuid,
+          timestamp: rec.timestamp,
+          blocks: thinkingBlocks,
+          isSidechain: !!rec.isSidechain,
+          model: null,
+          usage: null,
+        })
+
+        // If the record has content BESIDES the notification (rare but
+        // possible), fall through to create a user node for the rest.
+        const rawText = typeof rec.message?.content === 'string'
+          ? rec.message.content
+          : Array.isArray(rec.message?.content)
+            ? rec.message.content.filter((b) => b.type === 'text').map((b) => b.text || '').join('')
+            : ''
+        const stripped = rawText.replace(TASK_NOTIF_RE, '').trim()
+        if (!stripped) continue
+        // Re-parse the stripped content for any remaining user text
+        const remainderBlocks = normalizeUserContent(stripped)
+        if (remainderBlocks.length === 0) continue
+        // Fall through to create a user node below with remainderBlocks
+        const slashCommand = extractSlashCommand(stripped)
+        nodes.push({
+          kind: 'user',
+          uuid: rec.uuid,
+          timestamp: rec.timestamp,
+          blocks: remainderBlocks,
+          isSidechain: !!rec.isSidechain,
+          slashCommand,
+        })
+        continue
+      }
+
       const blocks = normalizeUserContent(rec.message?.content)
       if (blocks.length === 0) continue
 
@@ -162,9 +231,6 @@ export function parseMessages(records) {
             content: tr.content,
             isError: tr.is_error,
             isSidechain: !!rec.isSidechain,
-            // Carry the raw structured payload so renderers like AskUserQuestion
-            // can read clean fields (e.g. `answers`) without re-parsing the
-            // free-form `content` string.
             rawResult: rec.toolUseResult,
           })
         }
