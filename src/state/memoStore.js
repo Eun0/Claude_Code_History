@@ -219,6 +219,12 @@ export const actions = {
     emit()
   },
 
+  selectAll() {
+    const all = new Set(state.orderedUuids)
+    state = { ...state, selectedUuids: all, selectMode: true, lastSelectedUuid: null }
+    emit()
+  },
+
   clearSelection() {
     state = { ...state, selectedUuids: new Set(), selectMode: false, lastSelectedUuid: null }
     emit()

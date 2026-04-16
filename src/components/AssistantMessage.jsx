@@ -1,34 +1,7 @@
-import Markdown from './Markdown.jsx'
-import ToolGroup from './ToolGroup.jsx'
-import ImageBlock from './ImageBlock.jsx'
-
-// Between two Claude-to-user text paragraphs, everything that's "work" —
-// thinking, tool calls — should collapse into a single quiet group. Images
-// and text are the user-facing content that breaks a group.
-function groupBlocks(blocks) {
-  const out = []
-  let buf = []
-  const flush = () => {
-    if (buf.length) {
-      out.push({ __kind: 'op_group', items: buf })
-      buf = []
-    }
-  }
-  for (const b of blocks) {
-    if (b.type === 'text' || b.type === 'image') {
-      flush()
-      out.push(b)
-    } else {
-      // thinking, tool_use
-      buf.push(b)
-    }
-  }
-  flush()
-  return out
-}
+import { renderAssistantBody } from '../lib/renderMessageHtml.js'
 
 export default function AssistantMessage({ node }) {
-  const groups = groupBlocks(node.blocks || [])
+  const bodyHtml = renderAssistantBody(node.blocks || [])
   return (
     <div className="message-content assistant">
       <div className="message-header">
@@ -45,15 +18,10 @@ export default function AssistantMessage({ node }) {
           </span>
         )}
       </div>
-      <div className="message-body">
-        {groups.map((g, i) => {
-          if (g.__kind === 'op_group') return <ToolGroup key={i} items={g.items} />
-          if (g.type === 'text') return <Markdown key={i}>{g.text}</Markdown>
-          if (g.type === 'image')
-            return <ImageBlock key={i} media_type={g.media_type} data={g.data} />
-          return null
-        })}
-      </div>
+      <div
+        className="message-body"
+        dangerouslySetInnerHTML={{ __html: bodyHtml }}
+      />
     </div>
   )
 }

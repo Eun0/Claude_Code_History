@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import UserMessage from './UserMessage.jsx'
 import AssistantMessage from './AssistantMessage.jsx'
-import ToolResultBlock from './ToolResultBlock.jsx'
+import { renderToolResult } from '../lib/renderMessageHtml.js'
 import { groupSidechains } from '../lib/groupSidechains.js'
 import { fetchSession } from '../state/sessionCache.js'
 
@@ -136,9 +136,10 @@ function renderNode(node, i) {
       {node.kind === 'user' && <UserMessage node={node} />}
       {node.kind === 'assistant' && <AssistantMessage node={node} />}
       {node.kind === 'tool_result' && (
-        <div className="message-content tool">
-          <ToolResultBlock content={node.content} isError={node.isError} />
-        </div>
+        <div
+          className="message-content tool"
+          dangerouslySetInnerHTML={{ __html: renderToolResult(node.content, node.isError) }}
+        />
       )}
     </div>
   )

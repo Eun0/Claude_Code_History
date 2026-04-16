@@ -8,6 +8,7 @@ import { marked } from 'marked'
 import { readMemos } from './memoStore.js'
 import { readSessionParsed } from './sessions.js'
 import { formatToolUse } from '../src/lib/formatTools.js'
+import { renderDocBody } from '../src/lib/renderMessageHtml.js'
 
 // Strip Claude Code CLI wrappers the same way the web UserMessage does.
 function cleanUserText(s) {
@@ -166,11 +167,10 @@ function renderNoteMarkdown(note) {
 }
 
 export async function buildMemoExport(projectId, sessionId, { title, editable = false } = {}) {
-  const [{ meta, messages }, board, template, viewer] = await Promise.all([
+  const [{ meta, messages }, board, template] = await Promise.all([
     readSessionParsed(projectId, sessionId),
     readMemos(sessionId),
     loadTemplate(),
-    loadViewer(),
   ])
 
   const byUuid = new Map()
@@ -217,26 +217,34 @@ export async function buildMemoExport(projectId, sessionId, { title, editable = 
     editable,
   }
 
-  const dataScript = `<script>window.__MEMOS__=${JSON.stringify(payload).replace(/</g, '\\u003c')};</script>`
-  const viewerScript = `<script>${viewer}</script>`
-
   const docTitle = customTitle
     ? customTitle
     : `Claude Memos — ${sessionId.slice(0, 8)}`
 
-  // Replace all placeholders in a single pass with a function replacer.
-  // Sequential .replace() calls would re-scan substituted content — if the
-  // embedded JSON payload happens to contain the literal string `__VIEWER__`
-  // (e.g., a memo about this exporter itself), the next pass would inject
-  // viewer.js source — with raw newlines — into the middle of the JSON,
-  // breaking JSON.parse in the browser. The function form also bypasses
-  // String.replace's $&/$`/$'/$$ special patterns.
-  const replacements = {
-    __DATA__: dataScript,
-    __VIEWER__: viewerScript,
-    __TITLE__: escapeHtml(docTitle),
+  if (editable) {
+    // /preview — keep the interactive viewer.js path for edit mode
+    const viewer = await loadViewer()
+    const dataScript = `<script>window.__MEMOS__=${JSON.stringify(payload).replace(/</g, '\\u003c')};</script>`
+    const viewerScript = `<script>${viewer}</script>`
+    const replacements = {
+      __DATA__: dataScript,
+      __VIEWER__: viewerScript,
+      __TITLE__: escapeHtml(docTitle),
+      __BODY__: '',
+    }
+    return template.replace(/__DATA__|__VIEWER__|__TITLE__|__BODY__/g, (m) => replacements[m])
   }
-  return template.replace(/__DATA__|__VIEWER__|__TITLE__/g, (m) => replacements[m])
+
+  // Download — pre-rendered static HTML, no JavaScript required.
+  // Uses the same renderDocBody that the React app and viewer.js share.
+  const bodyHtml = renderDocBody(payload)
+  const replacements = {
+    __DATA__: '',
+    __VIEWER__: '',
+    __TITLE__: escapeHtml(docTitle),
+    __BODY__: bodyHtml,
+  }
+  return template.replace(/__DATA__|__VIEWER__|__TITLE__|__BODY__/g, (m) => replacements[m])
 }
 
 // Cross-session export for /editor's Download HTML. Shares the template +
@@ -245,7 +253,7 @@ export async function buildMemoExport(projectId, sessionId, { title, editable = 
 // same formatTools output, same .memo styling) — just with blocks drawn
 // from different (projectId, sessionId) pairs.
 export async function buildCrossSessionExport({ docTitle, intro, blocks }) {
-  const [template, viewer] = await Promise.all([loadTemplate(), loadViewer()])
+  const template = await loadTemplate()
 
   // Dedupe session reads across blocks that reference the same session.
   const sessionPromises = new Map()
@@ -303,13 +311,13 @@ export async function buildCrossSessionExport({ docTitle, intro, blocks }) {
     editable: false,
   }
 
-  const dataScript = `<script>window.__MEMOS__=${JSON.stringify(payload).replace(/</g, '\\u003c')};</script>`
-  const viewerScript = `<script>${viewer}</script>`
-
+  // Cross-session downloads are always static (no edit mode).
+  const bodyHtml = renderDocBody(payload)
   const replacements = {
-    __DATA__: dataScript,
-    __VIEWER__: viewerScript,
+    __DATA__: '',
+    __VIEWER__: '',
     __TITLE__: escapeHtml(headingTitle),
+    __BODY__: bodyHtml,
   }
-  return template.replace(/__DATA__|__VIEWER__|__TITLE__/g, (m) => replacements[m])
+  return template.replace(/__DATA__|__VIEWER__|__TITLE__|__BODY__/g, (m) => replacements[m])
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import UserMessage from './UserMessage.jsx'
 import AssistantMessage from './AssistantMessage.jsx'
-import ToolResultBlock from './ToolResultBlock.jsx'
+import { renderToolResult } from '../lib/renderMessageHtml.js'
 import { useMemos, pendingDrag } from '../state/memoStore.js'
 
 // Elements within a row that should NOT trigger row selection when clicked.
@@ -121,9 +121,10 @@ export default function MessageRow({ node, memosByMessage, highlightedUuid }) {
       {node.kind === 'user' && <UserMessage node={node} />}
       {node.kind === 'assistant' && <AssistantMessage node={node} />}
       {node.kind === 'tool_result' && (
-        <div className="message-content tool">
-          <ToolResultBlock content={node.content} isError={node.isError} />
-        </div>
+        <div
+          className="message-content tool"
+          dangerouslySetInnerHTML={{ __html: renderToolResult(node.content, node.isError) }}
+        />
       )}
     </div>
   )

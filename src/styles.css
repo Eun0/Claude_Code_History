@@ -1141,13 +1141,14 @@ pre code {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
-.slash-badge {
+/* Slash command as inline code inside the user bubble. */
+.slash-command {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 0.9em;
   color: var(--accent);
-  padding: 0;
-  background: none;
-  border-bottom: 1px solid var(--accent-soft);
+  background: var(--bg-code);
+  padding: 2px 6px;
+  border-radius: 3px;
 }
 
 .message-body {
@@ -1713,7 +1714,6 @@ pre code {
 .selection-bar button.primary:hover {
   background: #fff;
 }
-
 /* ---------- Modal ---------- */
 .modal-backdrop {
   position: fixed;

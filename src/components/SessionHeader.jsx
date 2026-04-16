@@ -117,6 +117,20 @@ export default function SessionHeader({ meta, liveStatus }) {
           />
           show system events
         </label>
+        <label className="select-all">
+          <input
+            type="checkbox"
+            checked={state.orderedUuids.length > 0 && state.selectedUuids.size === state.orderedUuids.length}
+            onChange={() => {
+              if (state.selectedUuids.size === state.orderedUuids.length) {
+                actions.clearSelection()
+              } else {
+                actions.selectAll()
+              }
+            }}
+          />
+          select all
+        </label>
       </div>
     </div>
   )

@@ -2,22 +2,7 @@
 // (/api/sessions/:sid/memos/markdown) and client-side (/editor's Copy MD)
 // so both surfaces produce byte-identical output for the same memo.
 
-// Strip Claude Code CLI wrappers the same way the web UserMessage / HTML
-// exporter do, so copied markdown doesn't include `<command-name>` etc.
-function cleanUserText(s) {
-  if (!s) return ''
-  return s
-    .replace(/<command-name>[\s\S]*?<\/command-name>/g, '')
-    .replace(/<command-message>[\s\S]*?<\/command-message>/g, '')
-    .replace(/<command-args>([\s\S]*?)<\/command-args>/g, (_, inner) => inner.trim())
-    .replace(
-      /<local-command-stdout>([\s\S]*?)<\/local-command-stdout>/g,
-      (_, inner) => '```\n' + inner.trim() + '\n```'
-    )
-    .replace(/<local-command-caveat>[\s\S]*?<\/local-command-caveat>/g, '')
-    .replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '')
-    .trim()
-}
+import { cleanUserText, mergeAssistantTurns } from './renderMessageHtml.js'
 
 function renderUserBody(node) {
   const parts = []
@@ -46,38 +31,6 @@ function renderAssistantBody(node) {
   return parts.join('\n\n')
 }
 
-// Merge consecutive assistant nodes (with intervening tool_result / system
-// events) into a single turn so they share one "Claude" header. Mirrors the
-// exported HTML viewer's `mergeAssistantTurns`.
-function mergeAssistantTurns(nodes) {
-  const out = []
-  let prevSpeaker = null
-  let lastAssistantIdx = -1
-  for (const n of nodes) {
-    const isAssistant = n.kind === 'assistant'
-    const continuesPrev =
-      isAssistant && prevSpeaker === 'assistant' && lastAssistantIdx >= 0
-    if (continuesPrev) {
-      const prev = out[lastAssistantIdx]
-      prev.blocks = (prev.blocks || []).concat(n.blocks || [])
-    } else if (isAssistant) {
-      out.push({ ...n, blocks: (n.blocks || []).slice() })
-      lastAssistantIdx = out.length - 1
-    } else if (n.kind === 'system' || n.kind === 'tool_result') {
-      // invisible events — don't break the assistant run
-    } else {
-      out.push(n)
-      lastAssistantIdx = -1
-    }
-    if (n.kind === 'user' || n.kind === 'assistant') {
-      prevSpeaker = n.kind
-    } else if (n.kind !== 'tool_result' && n.kind !== 'system') {
-      prevSpeaker = null
-    }
-  }
-  return out
-}
-
 function quote(body) {
   return body
     .split('\n')
@@ -92,7 +45,7 @@ export function renderTurns(nodes) {
     if (n.kind === 'user') {
       const body = renderUserBody(n)
       if (!body) continue
-      const slash = n.slashCommand ? ` \`/${n.slashCommand}\`` : ''
+      const slash = n.slashCommand ? ` \`/${n.slashCommand.replace(/^\//, '')}\`` : ''
       out.push(`### 👤 You${slash}`)
       out.push('')
       out.push(quote(body))
