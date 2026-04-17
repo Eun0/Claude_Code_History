@@ -23,6 +23,8 @@ function cleanUserText(s) {
     )
     .replace(/<local-command-caveat>[\s\S]*?<\/local-command-caveat>/g, '')
     .replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '')
+    .replace(/<ide_selection>[\s\S]*?<\/ide_selection>/g, '')
+    .replace(/<ide_opened_file>[\s\S]*?<\/ide_opened_file>/g, '')
     .trim()
 }
 

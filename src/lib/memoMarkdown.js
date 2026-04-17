@@ -6,6 +6,9 @@ import { cleanUserText, mergeAssistantTurns } from './renderMessageHtml.js'
 
 function renderUserBody(node) {
   const parts = []
+  if (node.slashCommand) {
+    parts.push('/' + node.slashCommand.replace(/^\//, ''))
+  }
   for (const b of node.blocks || []) {
     if (b.type === 'text') {
       const cleaned = cleanUserText(b.text || '')
@@ -45,8 +48,7 @@ export function renderTurns(nodes) {
     if (n.kind === 'user') {
       const body = renderUserBody(n)
       if (!body) continue
-      const slash = n.slashCommand ? ` \`/${n.slashCommand.replace(/^\//, '')}\`` : ''
-      out.push(`### 👤 You${slash}`)
+      out.push('### 👤 You')
       out.push('')
       out.push(quote(body))
       out.push('')
