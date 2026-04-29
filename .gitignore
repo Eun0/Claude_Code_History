@@ -15,6 +15,7 @@ dist-ssr
 # History Viewer for Claude Code — local runtime data
 data/memos
 data/clips
+data/servers.json
 
 # Claude Code local settings (user paths, permissions)
 .claude/

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { readHiddenSessions, writeHiddenSessions } from '../state/hiddenSessions.js'
 
-export default function SessionSidebar({ projectId, sessions, activeSessionId, error }) {
+export default function SessionSidebar({ serverId = null, projectId, sessions, activeSessionId, error }) {
   const [hidden, setHidden] = useState(() => readHiddenSessions())
   const [view, setView] = useState('active') // 'active' | 'hidden'
 
@@ -80,7 +80,11 @@ export default function SessionSidebar({ projectId, sessions, activeSessionId, e
                   (isHidden && !showingHidden ? ' is-hidden-active' : '') +
                   (showingHidden ? ' hidden-row' : '')
                 }
-                href={`#/p/${encodeURIComponent(projectId)}/s/${encodeURIComponent(s.sessionId)}`}
+                href={
+                  serverId
+                    ? `#/server/${encodeURIComponent(serverId)}/p/${encodeURIComponent(projectId)}/s/${encodeURIComponent(s.sessionId)}`
+                    : `#/p/${encodeURIComponent(projectId)}/s/${encodeURIComponent(s.sessionId)}`
+                }
               >
                 <div className="title">{s.title}</div>
                 <div className="sub">

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api.js'
 import { readHiddenProjects, writeHiddenProjects } from '../state/hiddenProjects.js'
+import SourceTabs from '../components/SourceTabs.jsx'
 
 const SORT_OPTIONS = [
   { value: 'recent', label: 'Recent' },
@@ -9,7 +10,7 @@ const SORT_OPTIONS = [
 
 const PAGE_SIZE = 9
 
-export default function ProjectListPage() {
+export default function ProjectListPage({ serverId = null }) {
   const [projects, setProjects] = useState(null)
   const [error, setError] = useState(null)
   const [query, setQuery] = useState('')
@@ -18,6 +19,11 @@ export default function ProjectListPage() {
   const [hidden, setHidden] = useState(() => readHiddenProjects())
   const [view, setView] = useState('active') // 'active' | 'hidden'
   const [page, setPage] = useState(1)
+  const [servers, setServers] = useState([])
+
+  useEffect(() => {
+    api.listServers().then(setServers).catch(() => {})
+  }, [])
 
   // Reset to page 1 when the user *intentionally* changes what they're
   // browsing (search/sort/empty-filter/view). Hiding or unhiding individual
@@ -29,8 +35,13 @@ export default function ProjectListPage() {
   }, [query, hideEmpty, sortBy, view])
 
   useEffect(() => {
-    api.listProjects().then(setProjects).catch((e) => setError(String(e)))
-  }, [])
+    setProjects(null)
+    setError(null)
+    const fetch = serverId
+      ? api.listRemoteProjects(serverId)
+      : api.listProjects()
+    fetch.then(setProjects).catch((e) => setError(String(e)))
+  }, [serverId])
 
   const hide = (id) => {
     setHidden((prev) => {
@@ -153,6 +164,7 @@ export default function ProjectListPage() {
                 <ProjectCard
                   key={p.id}
                   project={p}
+                  serverId={serverId}
                   hidden={showingHidden}
                   onHide={hide}
                   onUnhide={unhide}
@@ -196,7 +208,8 @@ export default function ProjectListPage() {
 
   return (
     <div className="project-list-page">
-      <h1>Projects</h1>
+      <SourceTabs servers={servers} activeServerId={serverId} />
+      <h1>Projects{serverId ? ` · ${servers.find((s) => s.id === serverId)?.label || serverId}` : ''}</h1>
       {body}
     </div>
   )
@@ -264,8 +277,11 @@ function Pagination({ page, totalPages, onChange }) {
   )
 }
 
-function ProjectCard({ project: p, hidden, onHide, onUnhide }) {
+function ProjectCard({ project: p, serverId, hidden, onHide, onUnhide }) {
   const { name, parent } = splitPath(p.decodedPath)
+  const href = serverId
+    ? `#/server/${encodeURIComponent(serverId)}/p/${encodeURIComponent(p.id)}`
+    : `#/p/${encodeURIComponent(p.id)}`
   const meta = (
     <>
       <div className="name">{name}</div>
@@ -309,7 +325,7 @@ function ProjectCard({ project: p, hidden, onHide, onUnhide }) {
   return (
     <a
       className="project-card"
-      href={`#/p/${encodeURIComponent(p.id)}`}
+      href={href}
       title={p.decodedPath}
     >
       {meta}

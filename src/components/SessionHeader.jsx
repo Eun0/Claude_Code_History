@@ -74,7 +74,7 @@ export default function SessionHeader({ meta, liveStatus }) {
             </span>
           </button>
         )}
-        {liveStatus && (
+        {liveStatus && liveStatus !== 'remote' && (
           <span
             className={'live-indicator live-' + liveStatus}
             title={
@@ -87,6 +87,12 @@ export default function SessionHeader({ meta, liveStatus }) {
           >
             <span className="dot" />
             {liveStatus === 'live' ? 'live' : liveStatus === 'connecting' ? '…' : 'offline'}
+          </span>
+        )}
+        {liveStatus === 'remote' && (
+          <span className="live-indicator live-remote" title="Remote server session (read-only)">
+            <span className="dot" />
+            remote
           </span>
         )}
       </div>

@@ -15,6 +15,11 @@ import {
 import { buildMemoExport, buildCrossSessionExport } from './exportHtml.js'
 import { renderMemosMarkdown } from './exportMarkdown.js'
 import { searchAll } from './search.js'
+import { parseSshConfig } from './sshConfig.js'
+import { listServers, addServer, removeServer } from './serverStore.js'
+import { listRemoteProjects } from './remoteProjects.js'
+import { listRemoteSessions, readRemoteSessionParsed } from './remoteSessions.js'
+import { searchRemote } from './remoteSearch.js'
 
 // Map sessionId → projectId via on-disk scan. Cached for 10s.
 let projectLookupCache = { at: 0, map: new Map() }
@@ -228,6 +233,77 @@ export async function registerRoutes(app) {
   app.get('/api/search', async (req) => {
     const { q, tool, from, to } = req.query
     return await searchAll({ q, tool, from, to })
+  })
+
+  // ---- SSH / Remote servers ----
+  app.get('/api/ssh-hosts', async () => {
+    return await parseSshConfig()
+  })
+
+  app.get('/api/servers', async () => {
+    return await listServers()
+  })
+
+  app.post('/api/servers', async (req, reply) => {
+    try {
+      const { sshAlias } = req.body || {}
+      if (!sshAlias) {
+        reply.code(400)
+        return { error: 'sshAlias required' }
+      }
+      return await addServer(sshAlias)
+    } catch (err) {
+      reply.code(400)
+      return { error: String(err.message || err) }
+    }
+  })
+
+  app.delete('/api/servers/:id', async (req, reply) => {
+    try {
+      await removeServer(req.params.id)
+      reply.code(204)
+      return null
+    } catch (err) {
+      reply.code(404)
+      return { error: String(err.message || err) }
+    }
+  })
+
+  app.get('/api/servers/:id/projects', async (req, reply) => {
+    try {
+      return await listRemoteProjects(req.params.id)
+    } catch (err) {
+      reply.code(500)
+      return { error: String(err.message || err) }
+    }
+  })
+
+  app.get('/api/servers/:id/projects/:pid/sessions', async (req, reply) => {
+    try {
+      return await listRemoteSessions(req.params.id, req.params.pid)
+    } catch (err) {
+      reply.code(500)
+      return { error: String(err.message || err) }
+    }
+  })
+
+  app.get('/api/servers/:id/projects/:pid/sessions/:sessionId', async (req, reply) => {
+    try {
+      return await readRemoteSessionParsed(req.params.id, req.params.pid, req.params.sessionId)
+    } catch (err) {
+      reply.code(500)
+      return { error: String(err.message || err) }
+    }
+  })
+
+  app.get('/api/servers/:id/search', async (req, reply) => {
+    try {
+      const { q, tool, from, to } = req.query
+      return await searchRemote(req.params.id, { q, tool, from, to })
+    } catch (err) {
+      reply.code(500)
+      return { error: String(err.message || err) }
+    }
   })
 
   // ---- Live session watch (SSE) ----

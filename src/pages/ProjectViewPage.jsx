@@ -3,22 +3,23 @@ import { api } from '../api.js'
 import SessionSidebar from '../components/SessionSidebar.jsx'
 import SessionViewPage from './SessionViewPage.jsx'
 
-export default function ProjectViewPage({ projectId, sessionId, messageUuid }) {
+export default function ProjectViewPage({ serverId = null, projectId, sessionId, messageUuid }) {
   const [sessions, setSessions] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     setSessions(null)
     setError(null)
-    api
-      .listSessions(projectId)
-      .then(setSessions)
-      .catch((e) => setError(String(e)))
-  }, [projectId])
+    const fetch = serverId
+      ? api.listRemoteSessions(serverId, projectId)
+      : api.listSessions(projectId)
+    fetch.then(setSessions).catch((e) => setError(String(e)))
+  }, [serverId, projectId])
 
   return (
     <>
       <SessionSidebar
+        serverId={serverId}
         projectId={projectId}
         sessions={sessions}
         activeSessionId={sessionId}
@@ -26,6 +27,7 @@ export default function ProjectViewPage({ projectId, sessionId, messageUuid }) {
       />
       {sessionId ? (
         <SessionViewPage
+          serverId={serverId}
           projectId={projectId}
           sessionId={sessionId}
           messageUuid={messageUuid}

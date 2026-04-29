@@ -71,4 +71,23 @@ export const api = {
     const q = new URLSearchParams(params).toString()
     return request(`/api/search?${q}`)
   },
+
+  // Remote servers
+  listSshHosts: () => request('/api/ssh-hosts'),
+  listServers: () => request('/api/servers'),
+  addServer: (sshAlias) =>
+    request('/api/servers', { method: 'POST', body: JSON.stringify({ sshAlias }) }),
+  removeServer: (id) => request(`/api/servers/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  listRemoteProjects: (serverId) =>
+    request(`/api/servers/${encodeURIComponent(serverId)}/projects`),
+  listRemoteSessions: (serverId, projectId) =>
+    request(`/api/servers/${encodeURIComponent(serverId)}/projects/${encodeURIComponent(projectId)}/sessions`),
+  getRemoteSession: (serverId, projectId, sessionId) =>
+    request(`/api/servers/${encodeURIComponent(serverId)}/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}`),
+
+  searchRemote: (serverId, params) => {
+    const q = new URLSearchParams(params).toString()
+    return request(`/api/servers/${encodeURIComponent(serverId)}/search?${q}`)
+  },
 }
