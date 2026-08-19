@@ -90,4 +90,31 @@ export const api = {
     const q = new URLSearchParams(params).toString()
     return request(`/api/servers/${encodeURIComponent(serverId)}/search?${q}`)
   },
+
+  // In-session chat (local sessions only)
+  sendChat: (sessionId, text) =>
+    request(`/api/sessions/${encodeURIComponent(sessionId)}/chat`, {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    }),
+  resolveChatPermission: (sessionId, permId, decision, scope = 'once') =>
+    request(`/api/sessions/${encodeURIComponent(sessionId)}/chat/permission`, {
+      method: 'POST',
+      body: JSON.stringify({ permId, decision, scope }),
+    }),
+  answerChatQuestion: (sessionId, permId, answers) =>
+    request(`/api/sessions/${encodeURIComponent(sessionId)}/chat/answer`, {
+      method: 'POST',
+      body: JSON.stringify({ permId, answers }),
+    }),
+  interruptChat: (sessionId) =>
+    request(`/api/sessions/${encodeURIComponent(sessionId)}/chat/interrupt`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
+  stopChat: (sessionId) =>
+    request(`/api/sessions/${encodeURIComponent(sessionId)}/chat/stop`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
 }

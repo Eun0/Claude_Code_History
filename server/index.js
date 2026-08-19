@@ -3,6 +3,7 @@ import fastifyStatic from '@fastify/static'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { registerRoutes } from './routes.js'
+import { disposeAll } from './chatService.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(__dirname, '..')
@@ -29,6 +30,14 @@ if (isProd) {
       return
     }
     reply.sendFile('index.html')
+  })
+}
+
+// Tear down any live Claude chat processes on shutdown.
+for (const sig of ['SIGINT', 'SIGTERM']) {
+  process.on(sig, () => {
+    try { disposeAll() } catch {}
+    app.close().finally(() => process.exit(0))
   })
 }
 

@@ -19,6 +19,7 @@ Claude Code 대화 히스토리를 웹에서 브라우징하고, 가치 있는 �
 - **Editor (cross-session 작성기)** — 여러 세션의 메모를 두레이 "업무 참조" 방식으로 하나의 문서로 모아 편집, 로컬 드래프트 자동 저장
 - **공유** — Download HTML(단일 self-contained) / Copy Markdown / Preview
 - **Resume 명령 복사** — `cd "<cwd>" && claude --resume <sessionId>`
+- **세션 내 채팅** — 히스토리를 보던 그 세션을 **그 자리에서 이어서 대화**. 공식 `@anthropic-ai/claude-agent-sdk`로 세션을 resume → 응답은 같은 JSONL에 기록되어 기존 라이브 watch로 자동 렌더. 도구 권한은 **안전 기본(`default`)** 으로 UI에서 승인/거부, AskUserQuestion 다중선택 질문도 인앱 다이얼로그로 응답 (로컬 세션 전용)
 
 ## 상세 기능
 
@@ -40,6 +41,17 @@ Claude Code 대화 히스토리를 웹에서 브라우징하고, 가치 있는 �
 - **유저 버블 복사 버튼** — 버블 옆 클립보드 아이콘을 누르면 해당 메시지의 원문(슬래시 커맨드 포함, IDE wrapper 제거된 상태)만 클립보드에 복사. hover 시 등장
 - **Select All** — 세션 헤더의 `select all` 체크박스로 전체 메시지 일괄 선택/해제
 - thinking / system event 토글로 가독성 조정
+
+### 세션 내 채팅 (이어가기 · 권한 · 질문)
+열려 있는 **로컬** 세션 하단의 입력창으로 그 세션을 실제로 이어서 대화. (원격 SSH 세션은 파일 watch가 불가해 비활성)
+- **동작 원리** — 서버(`server/chatService.js`)가 공식 `@anthropic-ai/claude-agent-sdk`의 `query()`로 세션을 **resume**(원래 `cwd`에서 실행). Claude가 응답을 **같은 `<sessionId>.jsonl`에 append**하므로, 기존 `/watch` SSE → 공유 렌더러 경로가 새 메시지를 그대로 그려준다. 채팅 서비스는 메시지 렌더링을 새로 만들지 않고 **제어 평면(전송 · 권한 · 질문 · 상태)만** 담당
+- **입력창** — Enter 전송 / Shift+Enter 줄바꿈, IME 조합 중 오발신 방지, 자동 높이. 응답 중에는 `Claude가 작업 중…` 표시 + **중단** 버튼(`query.interrupt()`)
+- **도구 권한 — 안전 기본** — `permissionMode: 'default'`. 읽기류는 통과, Bash/Write/Edit 등 위험 작업은 **반드시 다이얼로그로 확인**. SDK `canUseTool` → SSE `permission_request`로 브리지
+  - 다이얼로그: **거부 / 이 세션 동안 허용 / 허용**. "이 세션 동안 허용"은 SDK가 준 `suggestions`(예: `acceptEdits`)를 `updatedPermissions`로 적용 → 같은 도구 재질문 없음
+  - 허용 시 원본 입력을 `updatedInput`(record)으로 함께 반환 — CLI의 `can_use_tool` 스키마가 이를 필수로 요구(누락 시 ZodError)
+- **AskUserQuestion(선택지 질문)** — Claude가 선택형 질문을 던지면 인앱 다이얼로그로 렌더: **단일선택=라디오 / 다중선택(`multiSelect`)=체크박스** + "기타(직접 입력)". 사용자의 선택을 도구 답변으로 Claude에 전달해 자연스럽게 대화 진행
+- **제어 이벤트(SSE)** — `GET /api/sessions/:id/chat/events`로 `status` / `permission_request` / `question_request` / `turn_done` / `chat_error` 수신. 전송 `POST .../chat`, 권한 응답 `POST .../chat/permission`, 질문 응답 `POST .../chat/answer`, 중단 `POST .../chat/interrupt`
+  - 페이지 새로고침 등으로 SSE가 재연결되면 진행 중이던 권한/질문 프롬프트를 **재전송**해 멈춤 방지
 
 ### 메모
 - 드래그로 순서 재배치, 카드 클릭으로 원본 메시지로 점프
@@ -102,6 +114,8 @@ npm start
 
 > `node server/index.js`는 nodemon 없이 돌아가므로, 서버 코드(`server/`) 수정 시 `Ctrl+C` 후 다시 `npm run dev`.
 
+> **세션 내 채팅** 기능은 로컬에 로그인된 **Claude Code CLI**가 필요하다. `@anthropic-ai/claude-agent-sdk`가 동봉 바이너리로 세션을 resume하며, 인증/모델/스킬/MCP 설정은 평소 쓰던 `~/.claude` 환경을 그대로 사용한다.
+
 ## 데이터 위치
 
 - **세션 원본** (read-only): `~/.claude/projects/<encoded-project>/<session-id>.jsonl`
@@ -121,6 +135,17 @@ npm start
 | `GET` | `/api/projects/:id/sessions` |
 | `GET` | `/api/projects/:id/sessions/:sessionId` |
 | `GET` | `/api/sessions/:sessionId/watch` (SSE) |
+
+### 세션 내 채팅 (로컬 전용)
+
+| Method | Path | 설명 |
+|---|---|---|
+| `GET` | `/api/sessions/:sessionId/chat/events` (SSE) | 제어 이벤트 — `status` / `permission_request` / `question_request` / `turn_done` / `chat_error` |
+| `POST` | `/api/sessions/:sessionId/chat` | 프롬프트 전송 (`{text}`) — 세션 resume 후 stdin 전달 |
+| `POST` | `/api/sessions/:sessionId/chat/permission` | 권한 응답 (`{permId, decision: 'allow'\|'deny', scope?: 'once'\|'session'}`) |
+| `POST` | `/api/sessions/:sessionId/chat/answer` | AskUserQuestion 응답 (`{permId, answers: [{selected:[], custom?}]}`) |
+| `POST` | `/api/sessions/:sessionId/chat/interrupt` | 진행 중 턴 중단 |
+| `POST` | `/api/sessions/:sessionId/chat/stop` | 채팅 세션 종료(하위 Claude 프로세스 정리) |
 
 ### 메모 (per-session)
 
@@ -223,6 +248,7 @@ server/                       # Fastify 서버
   remoteProjects.js           # 원격 프로젝트 목록 (SFTP)
   remoteSessions.js           # 원격 세션 읽기 (SFTP)
   remoteSearch.js             # 원격 검색 (SSH exec + grep)
+  chatService.js              # ★ 세션 내 채팅 — claude-agent-sdk resume + 권한/질문 브리지
   memos, search, export, ...
 src/lib/                      # 서버/클라이언트 공용 ESM
   renderMessageHtml.js        # ★★ 공유 HTML 렌더러 — 4 surface (앱·preview·editor·download)의 단일 소스
@@ -242,6 +268,9 @@ src/components/
   ReferencedConversation.jsx  # 메모의 messageUuids로 세션 메시지 필터링 + 렌더
   MemoReferencePicker.jsx     # /editor의 두레이-스타일 메모 참조 picker
   MemoPanel.jsx               # 세션 사이드 패널 (DraggableMemoList + ExportBar)
+  ChatComposer.jsx            # ★ 세션 내 채팅 입력창 (전송 / 작업중·중단)
+  PermissionDialog.jsx        # ★ 도구 권한 다이얼로그 (거부 / 세션 허용 / 허용)
+  QuestionDialog.jsx          # ★ AskUserQuestion 선택지 다이얼로그 (라디오/체크박스 + 기타)
   ...
 src/pages/
   EditorPage.jsx              # /editor — cross-session 작성기
@@ -260,6 +289,7 @@ data/memos/                   # 메모 JSON (런타임 생성, gitignored)
 - 메시지 행 `Shift+클릭` : 범위 선택
 - Add/Edit memo 모달 — 제목 입력 `Enter` : 저장 / textarea `Cmd(Ctrl)+Enter` : 저장
 - 메모 참조 picker — 항목 클릭 또는 `Enter`/`Space` : 선택 토글, `Esc` : 닫기
+- 세션 내 채팅 입력창 — `Enter` : 전송 / `Shift+Enter` : 줄바꿈 (IME 조합 중에는 전송 안 함)
 
 ## 라이선스
 

@@ -21,6 +21,7 @@ import { listRemoteProjects } from './remoteProjects.js'
 import { listRemoteSessions, readRemoteSessionParsed } from './remoteSessions.js'
 import { searchRemote } from './remoteSearch.js'
 import { formatError } from './errors.js'
+import * as chat from './chatService.js'
 
 // Map sessionId → projectId via on-disk scan. Cached for 10s.
 let projectLookupCache = { at: 0, map: new Map() }
@@ -379,5 +380,95 @@ export async function registerRoutes(app) {
 
     req.raw.on('close', cleanup)
     req.raw.on('error', cleanup)
+  })
+
+  // ---- In-session interactive chat (local sessions only) ----
+  // Control-plane only: prompts, tool-permission requests, and turn status.
+  // The conversation itself re-renders through the /watch SSE above, because
+  // resuming the session appends to the same JSONL file the watcher tails.
+
+  // SSE stream of chat control events (status / permission_request / turn_done / chat_error).
+  app.get('/api/sessions/:sessionId/chat/events', async (req, reply) => {
+    const sessionId = req.params.sessionId
+    const projectId = await projectForSession(sessionId)
+    if (!projectId) {
+      reply.code(404)
+      return { error: 'session not found in any project' }
+    }
+    reply.hijack()
+    const raw = reply.raw
+    raw.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    })
+    const unsubscribe = chat.addClient(sessionId, projectId, raw)
+    const heartbeat = setInterval(() => {
+      try { raw.write(': heartbeat\n\n') } catch {}
+    }, 25_000)
+    const cleanup = () => {
+      clearInterval(heartbeat)
+      unsubscribe()
+      try { raw.end() } catch {}
+    }
+    req.raw.on('close', cleanup)
+    req.raw.on('error', cleanup)
+  })
+
+  // Send a user prompt into the resumed session.
+  app.post('/api/sessions/:sessionId/chat', async (req, reply) => {
+    const sessionId = req.params.sessionId
+    const text = (req.body && req.body.text) || ''
+    if (!text.trim()) {
+      reply.code(400)
+      return { error: 'text required' }
+    }
+    const projectId = await projectForSession(sessionId)
+    if (!projectId) {
+      reply.code(404)
+      return { error: 'session not found in any project' }
+    }
+    try {
+      return await chat.sendMessage(sessionId, projectId, text)
+    } catch (err) {
+      reply.code(500)
+      return { error: formatError(err) }
+    }
+  })
+
+  // Resolve a permission prompt. Body: { permId, decision: 'allow'|'deny', scope?: 'once'|'session' }.
+  app.post('/api/sessions/:sessionId/chat/permission', async (req, reply) => {
+    const { permId, decision, scope } = req.body || {}
+    if (!permId || (decision !== 'allow' && decision !== 'deny')) {
+      reply.code(400)
+      return { error: 'permId and decision (allow|deny) required' }
+    }
+    const r = chat.resolvePermission(req.params.sessionId, permId, decision, scope || 'once')
+    if (!r.ok) reply.code(409)
+    return r
+  })
+
+  // Answer an AskUserQuestion prompt. Body: { permId, answers: [{selected:[], custom?}] }.
+  app.post('/api/sessions/:sessionId/chat/answer', async (req, reply) => {
+    const { permId, answers } = req.body || {}
+    if (!permId || !Array.isArray(answers)) {
+      reply.code(400)
+      return { error: 'permId and answers[] required' }
+    }
+    const r = chat.resolveQuestion(req.params.sessionId, permId, answers)
+    if (!r.ok) reply.code(409)
+    return r
+  })
+
+  // Interrupt the in-flight turn.
+  app.post('/api/sessions/:sessionId/chat/interrupt', async (req) => {
+    return await chat.interrupt(req.params.sessionId)
+  })
+
+  // Tear down the chat session (stop the underlying Claude process).
+  app.post('/api/sessions/:sessionId/chat/stop', async (req) => {
+    chat.stop(req.params.sessionId)
+    return { ok: true }
   })
 }

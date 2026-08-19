@@ -2934,3 +2934,257 @@ pre code {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ============================================================
+   In-session interactive chat
+   ============================================================ */
+
+/* Composer pinned to the bottom of the scrolling session view. */
+.chat-composer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  padding: 12px 28px 16px;
+  background: linear-gradient(to bottom, rgba(251, 250, 246, 0), var(--bg) 24%);
+  border-top: 1px solid var(--border-hair);
+}
+
+.chat-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-3);
+  margin-bottom: 8px;
+}
+
+.chat-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: chat-spin 0.7s linear infinite;
+}
+
+@keyframes chat-spin {
+  to { transform: rotate(360deg); }
+}
+
+.chat-interrupt {
+  margin-left: 6px;
+  padding: 2px 10px;
+  font-size: 12px;
+  color: var(--error);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.chat-interrupt:hover { border-color: var(--error); }
+
+.chat-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 8px 8px 14px;
+}
+
+.chat-textarea {
+  flex: 1;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  max-height: 200px;
+}
+
+.chat-send {
+  flex-shrink: 0;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 120ms;
+}
+.chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.chat-error {
+  margin: 0 28px 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--error);
+  background: #fdecee;
+  border: 1px solid var(--error);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* ---------- Permission dialog ---------- */
+.perm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(24, 24, 26, 0.32);
+  padding: 24px;
+}
+
+.perm-dialog {
+  width: 100%;
+  max-width: 520px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  padding: 20px 22px;
+}
+
+.perm-tool {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tool-ink);
+  background: var(--bg-soft);
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.perm-title {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 18px;
+  margin: 0 0 6px;
+  color: var(--text);
+}
+
+.perm-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  margin: 0 0 4px;
+}
+.perm-warn { color: var(--error); }
+
+.perm-input {
+  margin: 12px 0 4px;
+  max-height: 240px;
+  overflow: auto;
+  background: var(--bg-code);
+  border: 1px solid var(--border-code);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.perm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.perm-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  background: var(--bg);
+  color: var(--text);
+}
+.perm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.perm-deny { color: var(--error); border-color: var(--border); }
+.perm-deny:hover { border-color: var(--error); }
+.perm-allow-session { color: var(--accent-ink); }
+.perm-allow {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ---------- AskUserQuestion dialog ---------- */
+.q-dialog { max-width: 560px; }
+
+.q-body {
+  margin-top: 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.q-block { display: flex; flex-direction: column; gap: 8px; }
+
+.q-question {
+  font-family: var(--serif);
+  font-size: 15.5px;
+  font-weight: 500;
+  color: var(--text);
+}
+.q-header {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
+}
+
+.q-options { display: flex; flex-direction: column; gap: 6px; }
+
+.q-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  background: var(--bg);
+  transition: border-color 120ms, background 120ms;
+}
+.q-option:hover { border-color: var(--text-3); }
+.q-option.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.q-option input { margin-top: 3px; flex-shrink: 0; accent-color: var(--accent); }
+
+.q-opt-text { display: flex; flex-direction: column; gap: 2px; }
+.q-opt-label { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.q-opt-desc { font-size: 12.5px; color: var(--text-2); line-height: 1.45; }
+
+.q-custom {
+  margin-top: 2px;
+  padding: 7px 11px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  outline: none;
+}
+.q-custom:focus { border-color: var(--accent); border-style: solid; }

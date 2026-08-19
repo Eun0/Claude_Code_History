@@ -4,6 +4,9 @@ import MessageList from '../components/MessageList.jsx'
 import SessionHeader from '../components/SessionHeader.jsx'
 import MemoPanel from '../components/MemoPanel.jsx'
 import MemoSelectionBar from '../components/MemoSelectionBar.jsx'
+import ChatComposer from '../components/ChatComposer.jsx'
+import PermissionDialog from '../components/PermissionDialog.jsx'
+import QuestionDialog from '../components/QuestionDialog.jsx'
 import { actions as memoActions } from '../state/memoStore.js'
 
 export default function SessionViewPage({ serverId = null, projectId, sessionId, messageUuid }) {
@@ -11,6 +14,15 @@ export default function SessionViewPage({ serverId = null, projectId, sessionId,
   const [error, setError] = useState(null)
   const [liveStatus, setLiveStatus] = useState(serverId ? 'remote' : 'connecting')
   const sessionMainRef = useRef(null)
+
+  // Interactive chat (local sessions only).
+  const [chatStatus, setChatStatus] = useState('idle') // 'idle' | 'working'
+  const [permissionReq, setPermissionReq] = useState(null)
+  const [permBusy, setPermBusy] = useState(false)
+  const [questionReq, setQuestionReq] = useState(null)
+  const [questionBusy, setQuestionBusy] = useState(false)
+  const [chatError, setChatError] = useState(null)
+  const canChat = !serverId
 
   // Initial load. Fetch session and memos in parallel and commit them in
   // one shot — memoStore first, then setData — so React's auto-batching
@@ -135,6 +147,103 @@ export default function SessionViewPage({ serverId = null, projectId, sessionId,
     }
   }, [serverId, projectId, sessionId])
 
+  // Chat control events via SSE (local only). The conversation itself
+  // re-renders through the /watch effect above; this stream carries status,
+  // permission prompts, and errors.
+  useEffect(() => {
+    if (!canChat || !sessionId) return
+    let cancelled = false
+    const url = `/api/sessions/${encodeURIComponent(sessionId)}/chat/events`
+    const es = new EventSource(url)
+
+    const onStatus = (e) => {
+      if (cancelled) return
+      try { setChatStatus(JSON.parse(e.data).status || 'idle') } catch { /* ignore */ }
+    }
+    const onPermission = (e) => {
+      if (cancelled) return
+      try { setPermissionReq(JSON.parse(e.data)) } catch { /* ignore */ }
+    }
+    const onResolved = (e) => {
+      if (cancelled) return
+      try {
+        const { permId } = JSON.parse(e.data)
+        setPermissionReq((cur) => (cur && cur.permId === permId ? null : cur))
+      } catch { /* ignore */ }
+    }
+    const onQuestion = (e) => {
+      if (cancelled) return
+      try { setQuestionReq(JSON.parse(e.data)) } catch { /* ignore */ }
+    }
+    const onQuestionResolved = (e) => {
+      if (cancelled) return
+      try {
+        const { permId } = JSON.parse(e.data)
+        setQuestionReq((cur) => (cur && cur.permId === permId ? null : cur))
+      } catch { /* ignore */ }
+    }
+    const onDone = () => { if (!cancelled) setChatStatus('idle') }
+    const onChatError = (e) => {
+      if (cancelled) return
+      try { setChatError(JSON.parse(e.data).message || 'chat error') } catch { /* ignore */ }
+      setChatStatus('idle')
+    }
+
+    es.addEventListener('status', onStatus)
+    es.addEventListener('permission_request', onPermission)
+    es.addEventListener('permission_resolved', onResolved)
+    es.addEventListener('question_request', onQuestion)
+    es.addEventListener('question_resolved', onQuestionResolved)
+    es.addEventListener('turn_done', onDone)
+    es.addEventListener('chat_error', onChatError)
+
+    return () => {
+      cancelled = true
+      es.close()
+    }
+  }, [canChat, sessionId])
+
+  const handleSend = async (text) => {
+    setChatError(null)
+    setChatStatus('working')
+    try {
+      await api.sendChat(sessionId, text)
+    } catch (err) {
+      setChatError(String(err.message || err))
+      setChatStatus('idle')
+    }
+  }
+
+  const handleInterrupt = async () => {
+    try { await api.interruptChat(sessionId) } catch { /* ignore */ }
+  }
+
+  const handleDecide = async (decision, scope) => {
+    if (!permissionReq) return
+    setPermBusy(true)
+    try {
+      await api.resolveChatPermission(sessionId, permissionReq.permId, decision, scope)
+      setPermissionReq(null)
+    } catch (err) {
+      setChatError(String(err.message || err))
+    } finally {
+      setPermBusy(false)
+    }
+  }
+
+  const handleAnswer = async (answers) => {
+    if (!questionReq) return
+    setQuestionBusy(true)
+    try {
+      await api.answerChatQuestion(sessionId, questionReq.permId, answers)
+      setQuestionReq(null)
+    } catch (err) {
+      setChatError(String(err.message || err))
+    } finally {
+      setQuestionBusy(false)
+    }
+  }
+
   if (error) {
     return (
       <div className="session-empty">
@@ -160,9 +269,30 @@ export default function SessionViewPage({ serverId = null, projectId, sessionId,
       <div className="session-main" ref={sessionMainRef}>
         <SessionHeader meta={data.meta} liveStatus={liveStatus} />
         <MessageList messages={data.messages} highlightedUuid={messageUuid} />
+        {canChat ? (
+          <>
+            {chatError ? (
+              <div className="chat-error" onClick={() => setChatError(null)}>
+                {chatError}
+              </div>
+            ) : null}
+            <ChatComposer
+              status={chatStatus}
+              onSend={handleSend}
+              onInterrupt={handleInterrupt}
+            />
+          </>
+        ) : null}
       </div>
       <MemoPanel sessionMeta={data.meta} projectId={projectId} sessionId={sessionId} serverId={serverId} />
       <MemoSelectionBar />
+      <PermissionDialog request={permissionReq} onDecide={handleDecide} busy={permBusy} />
+      <QuestionDialog
+        key={questionReq?.permId || 'no-question'}
+        request={questionReq}
+        onSubmit={handleAnswer}
+        busy={questionBusy}
+      />
     </>
   )
 }
