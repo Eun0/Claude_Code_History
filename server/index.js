@@ -10,7 +10,11 @@ const projectRoot = path.resolve(__dirname, '..')
 const PORT = Number(process.env.PORT || 5174)
 const isProd = process.env.NODE_ENV === 'production'
 
-const app = Fastify({ logger: true })
+// Project ids are flattened filesystem paths, so `:id` / `:pid` params routinely
+// run past Fastify's 100-char maxParamLength default — worktree dirs especially.
+// Over the limit the router stops matching the route at all and the request
+// falls through to the 404 handler below, which looks like a missing project.
+const app = Fastify({ logger: true, routerOptions: { maxParamLength: 1000 } })
 
 app.log.info(`starting claude-code-history server (prod=${isProd})`)
 
