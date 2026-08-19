@@ -45,6 +45,7 @@ export async function addServer(sshAlias) {
     user: host.user,
     port: host.port,
     identityFile: host.identityFile,
+    proxyJump: host.proxyJump || null,
     claudePath: '~/.claude/projects',
     addedAt: new Date().toISOString(),
   }

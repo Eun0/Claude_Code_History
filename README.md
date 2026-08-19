@@ -12,7 +12,7 @@ Claude Code 대화 히스토리를 웹에서 브라우징하고, 가치 있는 �
 
 - `~/.claude/projects/` 의 모든 프로젝트/세션 **브라우징**
 - 대화 전체 **렌더링** — user / assistant / tool_use / tool_result / thinking / image / sidechain(subagent), Shiki 코드 하이라이팅 + GFM Markdown. 4개 surface(프로젝트 대화 뷰, Preview, Editor, Download HTML)가 **공유 렌더러** 1개를 사용해 시각적으로 동일
-- **원격 서버 히스토리** — `~/.ssh/config` 의 SSH 호스트를 연결해 원격 서버의 Claude Code 세션도 로컬과 동일하게 조회 (SFTP). 상단 탭으로 Local / 서버별 전환
+- **원격 서버 히스토리** — `~/.ssh/config` 의 SSH 호스트를 연결해 원격 서버의 Claude Code 세션도 로컬과 동일하게 조회 (SFTP). 상단 탭으로 Local / 서버별 전환. `ProxyJump` (다단 점프 호스트, `-J a,b` 형태 및 중첩 alias) 지원
 - **전역 검색** — 텍스트 + 툴 필터 + 날짜 범위. "서버에서도 검색" 체크 시 연결된 서버에서 SSH exec + grep으로 병렬 검색, 탭으로 결과 분리
 - **메모** — 메시지 범위를 선택해 제목+Markdown 노트로 저장, 세션별 보드 구성
 - **세션 메모 편집** — 사이드 패널의 `Preview & Edit`로 in-app 편집 화면 진입, 인라인으로 보드 타이틀 / 메모 / 순서 / 삭제 + 메인 탭과 자동 동기화
@@ -216,9 +216,9 @@ cd "<원본 cwd>" && claude --resume <sessionId>
 ```
 server/                       # Fastify 서버
   projects.js / sessions.js   # 로컬 세션 읽기
-  sshConfig.js                # ~/.ssh/config 파싱
+  sshConfig.js                # ~/.ssh/config 파싱 (ProxyJump 체인 해석 포함)
   serverStore.js              # data/servers.json CRUD
-  remoteFs.js                 # SSH2 SFTP 연결 풀
+  remoteFs.js                 # SSH2 SFTP 연결 풀 (ProxyJump 다단 터널링)
   errors.js                   # AggregateError 등 에러 메시지 평탄화
   remoteProjects.js           # 원격 프로젝트 목록 (SFTP)
   remoteSessions.js           # 원격 세션 읽기 (SFTP)
