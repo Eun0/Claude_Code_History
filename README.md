@@ -219,6 +219,7 @@ server/                       # Fastify 서버
   sshConfig.js                # ~/.ssh/config 파싱
   serverStore.js              # data/servers.json CRUD
   remoteFs.js                 # SSH2 SFTP 연결 풀
+  errors.js                   # AggregateError 등 에러 메시지 평탄화
   remoteProjects.js           # 원격 프로젝트 목록 (SFTP)
   remoteSessions.js           # 원격 세션 읽기 (SFTP)
   remoteSearch.js             # 원격 검색 (SSH exec + grep)

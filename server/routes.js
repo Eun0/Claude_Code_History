@@ -20,6 +20,7 @@ import { listServers, addServer, removeServer } from './serverStore.js'
 import { listRemoteProjects } from './remoteProjects.js'
 import { listRemoteSessions, readRemoteSessionParsed } from './remoteSessions.js'
 import { searchRemote } from './remoteSearch.js'
+import { formatError } from './errors.js'
 
 // Map sessionId → projectId via on-disk scan. Cached for 10s.
 let projectLookupCache = { at: 0, map: new Map() }
@@ -104,7 +105,7 @@ export async function registerRoutes(app) {
       return await setBoardTitle(req.params.sessionId, patch.title)
     } catch (err) {
       reply.code(400)
-      return { error: String(err.message || err) }
+      return { error: formatError(err) }
     }
   })
 
@@ -117,7 +118,7 @@ export async function registerRoutes(app) {
       })
     } catch (err) {
       reply.code(400)
-      return { error: String(err.message || err) }
+      return { error: formatError(err) }
     }
   })
 
@@ -172,7 +173,7 @@ export async function registerRoutes(app) {
       return html
     } catch (err) {
       reply.code(500)
-      return { error: String(err.message || err) }
+      return { error: formatError(err) }
     }
   })
 
@@ -198,7 +199,7 @@ export async function registerRoutes(app) {
       return await reorderMemos(req.params.sessionId, ids)
     } catch (err) {
       reply.code(400)
-      return { error: String(err.message || err) }
+      return { error: formatError(err) }
     }
   })
 
@@ -211,7 +212,7 @@ export async function registerRoutes(app) {
         return { error: 'memo not found' }
       }
       reply.code(400)
-      return { error: String(err.message || err) }
+      return { error: formatError(err) }
     }
   })
 
@@ -254,7 +255,7 @@ export async function registerRoutes(app) {
       return await addServer(sshAlias)
     } catch (err) {
       reply.code(400)
-      return { error: String(err.message || err) }
+      return { error: formatError(err) }
     }
   })
 
@@ -265,7 +266,7 @@ export async function registerRoutes(app) {
       return null
     } catch (err) {
       reply.code(404)
-      return { error: String(err.message || err) }
+      return { error: formatError(err) }
     }
   })
 
@@ -274,7 +275,7 @@ export async function registerRoutes(app) {
       return await listRemoteProjects(req.params.id)
     } catch (err) {
       reply.code(500)
-      return { error: String(err.message || err) }
+      return { error: formatError(err) }
     }
   })
 
@@ -283,7 +284,7 @@ export async function registerRoutes(app) {
       return await listRemoteSessions(req.params.id, req.params.pid)
     } catch (err) {
       reply.code(500)
-      return { error: String(err.message || err) }
+      return { error: formatError(err) }
     }
   })
 
@@ -292,7 +293,7 @@ export async function registerRoutes(app) {
       return await readRemoteSessionParsed(req.params.id, req.params.pid, req.params.sessionId)
     } catch (err) {
       reply.code(500)
-      return { error: String(err.message || err) }
+      return { error: formatError(err) }
     }
   })
 
@@ -302,7 +303,7 @@ export async function registerRoutes(app) {
       return await searchRemote(req.params.id, { q, tool, from, to })
     } catch (err) {
       reply.code(500)
-      return { error: String(err.message || err) }
+      return { error: formatError(err) }
     }
   })
 
@@ -352,7 +353,7 @@ export async function registerRoutes(app) {
       })
     } catch (err) {
       try {
-        raw.write(`event: error\ndata: ${JSON.stringify({ error: String(err.message || err) })}\n\n`)
+        raw.write(`event: error\ndata: ${JSON.stringify({ error: formatError(err) })}\n\n`)
         raw.end()
       } catch {}
       return
