@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { api } from '../api.js'
 import { useMemos } from '../state/memoStore.js'
 
-export default function MemoExportBar({ projectId, sessionId }) {
+export default function MemoExportBar({ projectId, sessionId, serverId = null }) {
   const { state } = useMemos()
   const [toast, setToast] = useState(null)
   const disabled = !state.sessionId || state.memos.length === 0
@@ -50,9 +50,14 @@ export default function MemoExportBar({ projectId, sessionId }) {
             // Open the in-app session memo editor in a new tab. Same window
             // origin so localStorage / state stays separate but the tab feels
             // like a "side" workspace for editing this session's memos.
-            const url = `${window.location.origin}${window.location.pathname}#/sessions/${encodeURIComponent(
+            const base = `${window.location.origin}${window.location.pathname}#/sessions/${encodeURIComponent(
               projectId
             )}/${encodeURIComponent(sessionId)}/edit`
+            // Preserve the SSH server context so the editor fetches the
+            // remote session rather than 404ing on a local project.
+            const url = serverId
+              ? `${base}?server=${encodeURIComponent(serverId)}`
+              : base
             window.open(url, '_blank', 'noopener')
           }}
         >

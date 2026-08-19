@@ -8,7 +8,7 @@ import MemoDoc from '../components/MemoDoc.jsx'
 // back through the existing memo API. Edits broadcast on the
 // 'memo-updates' channel so the main session view's side panel refreshes.
 
-export default function SessionMemoEditPage({ projectId, sessionId }) {
+export default function SessionMemoEditPage({ projectId, sessionId, serverId = null }) {
   const [board, setBoard] = useState(null) // { sessionId, projectId, title, memos }
   const [error, setError] = useState(null)
   // Landing here from the side panel's "Preview & Edit" button — users want
@@ -71,12 +71,15 @@ export default function SessionMemoEditPage({ projectId, sessionId }) {
       sourceMemoId: m.id,
       sourceProjectId: projectId,
       sourceSessionId: sessionId,
+      // Carry the SSH server id so ReferencedConversation fetches the
+      // remote session instead of 404ing on the local project route.
+      sourceServerId: serverId,
       title: m.title || '',
       note: m.note || '',
       messageUuids: m.messageUuids || [],
       order: m.order ?? 0,
     }))
-  }, [board, projectId, sessionId])
+  }, [board, projectId, sessionId, serverId])
 
   // Debounced PATCH for title/note edits — keystrokes shouldn't fire one
   // request per character.

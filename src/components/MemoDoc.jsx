@@ -352,6 +352,7 @@ function PreviewMemo({ block, index, showSource }) {
       <ReferencedConversation
         projectId={block.sourceProjectId}
         sessionId={block.sourceSessionId}
+        serverId={block.sourceServerId}
         messageUuids={block.messageUuids}
       />
       {showSource && srcBits.length > 0 && (

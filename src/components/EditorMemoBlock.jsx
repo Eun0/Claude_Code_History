@@ -155,6 +155,7 @@ export default function EditorMemoBlock({
       <ReferencedConversation
         projectId={block.sourceProjectId}
         sessionId={block.sourceSessionId}
+        serverId={block.sourceServerId}
         messageUuids={block.messageUuids}
       />
       {showSource && (

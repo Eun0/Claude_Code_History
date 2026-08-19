@@ -14,7 +14,7 @@ import { clearDraft as clearEditorDraft } from './state/editorDraft.js'
 //  #/memos                             → MemoListPage
 //  #/editor                            → EditorPage (cross-session composer)
 //  #/settings                          → SettingsPage (server management)
-//  #/sessions/:projectId/:sid/edit     → SessionMemoEditPage (in-app preview & edit)
+//  #/sessions/:projectId/:sid/edit[?server=:id] → SessionMemoEditPage (in-app preview & edit)
 //  #/p/:projectId                      → ProjectViewPage (sidebar + empty main)
 //  #/p/:projectId/s/:sid               → ProjectViewPage (sidebar + session view)
 //  #/server/:id                        → ProjectListPage (remote server)
@@ -41,6 +41,9 @@ function parseHash() {
       name: 'session-edit',
       projectId: segs[1],
       sessionId: segs[2],
+      // For SSH remote sessions the memo's source lives on a server; carry
+      // its id via ?server= so the editor fetches the right endpoint.
+      serverId: params.get('server') || null,
       params,
     }
   }
@@ -160,6 +163,7 @@ export default function App() {
           <SessionMemoEditPage
             projectId={route.projectId}
             sessionId={route.sessionId}
+            serverId={route.serverId}
           />
         )}
         {route.name === 'project' && (

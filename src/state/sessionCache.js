@@ -39,10 +39,16 @@ function queue(run) {
   })
 }
 
-export function fetchSession(projectId, sessionId) {
-  const key = `${projectId}|${sessionId}`
+// `serverId` (optional) routes the fetch to the remote-server endpoint —
+// memos referencing an SSH remote session live under a project that only
+// exists on that server, so the local /api/projects route 404s for them.
+export function fetchSession(projectId, sessionId, serverId = null) {
+  const key = `${serverId || ''}|${projectId}|${sessionId}`
   if (!cache.has(key)) {
-    const p = queue(() => api.getSession(projectId, sessionId)).catch((e) => {
+    const run = serverId
+      ? () => api.getRemoteSession(serverId, projectId, sessionId)
+      : () => api.getSession(projectId, sessionId)
+    const p = queue(run).catch((e) => {
       cache.delete(key)
       throw e
     })

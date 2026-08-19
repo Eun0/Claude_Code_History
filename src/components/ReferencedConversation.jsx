@@ -43,7 +43,7 @@ function mergeAssistantTurns(nodes) {
 // `initialMessages` lets the caller inject already-fetched session
 // messages so the component renders synchronously on first paint — used
 // by the HTML export path (renderToStaticMarkup can't run effects).
-export default function ReferencedConversation({ projectId, sessionId, messageUuids, initialMessages }) {
+export default function ReferencedConversation({ projectId, sessionId, serverId = null, messageUuids, initialMessages }) {
   const [messages, setMessages] = useState(initialMessages || null)
   const [error, setError] = useState(null)
 
@@ -51,7 +51,7 @@ export default function ReferencedConversation({ projectId, sessionId, messageUu
     if (initialMessages) return
     let cancelled = false
     if (!projectId || !sessionId) return
-    fetchSession(projectId, sessionId)
+    fetchSession(projectId, sessionId, serverId)
       .then((data) => {
         if (cancelled) return
         setMessages(data.messages || [])
@@ -62,7 +62,7 @@ export default function ReferencedConversation({ projectId, sessionId, messageUu
     return () => {
       cancelled = true
     }
-  }, [projectId, sessionId, initialMessages])
+  }, [projectId, sessionId, serverId, initialMessages])
 
   const nodes = useMemo(() => {
     if (!projectId || !sessionId) return []

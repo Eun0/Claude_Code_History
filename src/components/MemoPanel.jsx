@@ -3,7 +3,7 @@ import { useMemos } from '../state/memoStore.js'
 import DraggableMemoList from './DraggableMemoList.jsx'
 import MemoExportBar from './MemoExportBar.jsx'
 
-export default function MemoPanel({ sessionMeta, projectId, sessionId }) {
+export default function MemoPanel({ sessionMeta, projectId, sessionId, serverId = null }) {
   const { state, actions } = useMemos()
   const [collapsed, setCollapsed] = useState(false)
   const [localTitle, setLocalTitle] = useState(state.boardTitle || '')
@@ -59,7 +59,7 @@ export default function MemoPanel({ sessionMeta, projectId, sessionId }) {
       <div className="memo-list">
         <DraggableMemoList />
       </div>
-      <MemoExportBar sessionMeta={sessionMeta} projectId={projectId} sessionId={sessionId} />
+      <MemoExportBar sessionMeta={sessionMeta} projectId={projectId} sessionId={sessionId} serverId={serverId} />
     </div>
   )
 }
